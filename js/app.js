@@ -173,6 +173,7 @@ function midpoint(a,b,t){return {lat:lerp(a.lat,b.lat,t), lng:lerp(a.lng,b.lng,t
 function mkShipment(tracking,status,originCity,destCity,_unused,driverId,createdAt,email){
   return {
     trackingNumber:tracking,
+    packageName:"Shipment "+tracking,
     status:"Order Placed",
     sender:{name:"Warehouse — "+originCity, city:originCity},
     receiver:{name:"Recipient", city:destCity, email:email||""},
@@ -323,6 +324,7 @@ async function renderTrackView(trackingNumber){
     <div class="ticket">
       <div class="ticket-top">
         <div>
+          <div class="ticket-package-name">${escapeHtml(s.packageName||'Shipment')}</div>
           <div class="ticket-num-label">Tracking number</div>
           <div class="ticket-num">${s.trackingNumber}</div>
         </div>
@@ -403,9 +405,10 @@ async function renderTrackView(trackingNumber){
     <div class="card tracking-info">
       <h3>Tracking information</h3>
       <div class="tracking-info-grid">
+        <div><span>Package</span><strong>${escapeHtml(s.packageName||'Shipment')}</strong></div>
         <div><span>Tracking number</span><strong>${s.trackingNumber}</strong></div>
         <div><span>Last update</span><strong>${fmtTime(s.updatedAt||s.createdAt)}</strong></div>
-        <div><span>Current location</span><strong>${escapeHtml(s.currentPos.city||s.origin.city)}</strong></div>
+        <div><span>Current location</span><strong>${escapeHtml(s.statusHistory[s.statusHistory.length-1]?.location||s.origin.city)}</strong></div>
         <div><span>Destination</span><strong>${escapeHtml(s.destination.city)}</strong></div>
       </div>
     </div>
@@ -697,6 +700,7 @@ function openNewShipmentModal(){
       <h3>New shipment</h3>
       <div class="field"><label>Template (optional)</label><select id="ns-template"><option value="">Custom / none</option>${templateOptions}</select></div>
       <div class="field-row">
+        <div class="field"><label>Package name</label><input id="ns-package" placeholder="e.g. Customer order"/></div>
         <div class="field"><label>Sender name</label><input id="ns-sender" placeholder="Warehouse / company"/></div>
         <div class="field"><label>Origin city</label><select id="ns-origin">${cityOptions}</select></div>
       </div>
@@ -732,6 +736,7 @@ function populateNewShipmentFromTemplate(templateId){
 function closeModal(){ const o=document.querySelector('.modal-overlay'); if(o) o.remove(); }
 
 function createShipment(){
+  const packageName = document.getElementById('ns-package').value.trim() || 'Shipment';
   const sender = document.getElementById('ns-sender').value.trim() || 'Warehouse';
   const receiver = document.getElementById('ns-receiver').value.trim() || 'Recipient';
   const origin = document.getElementById('ns-origin').value;
@@ -742,6 +747,7 @@ function createShipment(){
   const tn = genTracking();
   const s = {
     trackingNumber:tn, status:'Order Placed',
+    packageName,
     sender:{name:sender, city:origin},
     receiver:{name:receiver, city:dest, email},
     origin:{city:origin, ...CITIES[origin]},
@@ -963,7 +969,7 @@ function tickMovement(){
   DATA.shipments.forEach(s=>{
     if(s.status!=='In Transit' && s.status!=='Out for Delivery') return;
     const d = s.driverId ? DATA.drivers.find(x=>x.id===s.driverId) : null;
-    if(!d || d.status!=='On Delivery') return;
+    if(d && d.status!=='On Delivery') return;
     const target = s.destination;
     const remaining = dist(s.currentPos, target);
     if(remaining < 0.01) return;
@@ -972,7 +978,7 @@ function tickMovement(){
       lat: lerp(s.currentPos.lat, target.lat, step),
       lng: lerp(s.currentPos.lng, target.lng, step)
     };
-    d.pos = {...s.currentPos};
+    if(d) d.pos = {...s.currentPos};
     moved = true;
   });
   if(moved){
