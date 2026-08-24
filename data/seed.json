@@ -1,0 +1,64 @@
+{
+  "_readme": "This file documents the data schema used by Swift Courier. The live site seeds itself automatically in the browser's local database on first load (see js/app.js -> seedData()). This file is provided as a reference export / starting point if you migrate to a real backend or database table.",
+  "cities": {
+    "New York, NY": { "lat": 40.7128, "lng": -74.0060 },
+    "Chicago, IL": { "lat": 41.8781, "lng": -87.6298 },
+    "Los Angeles, CA": { "lat": 34.0522, "lng": -118.2437 },
+    "Houston, TX": { "lat": 29.7604, "lng": -95.3698 },
+    "Phoenix, AZ": { "lat": 33.4484, "lng": -112.0740 },
+    "Denver, CO": { "lat": 39.7392, "lng": -104.9903 },
+    "Atlanta, GA": { "lat": 33.7490, "lng": -84.3880 },
+    "Seattle, WA": { "lat": 47.6062, "lng": -122.3321 },
+    "Miami, FL": { "lat": 25.7617, "lng": -80.1918 },
+    "Dallas, TX": { "lat": 32.7767, "lng": -96.7970 }
+  },
+  "status_steps": ["Order Placed", "Picked Up", "In Transit", "Out for Delivery", "Delivered"],
+  "shipment_schema": {
+    "trackingNumber": "string, e.g. SC100234567",
+    "status": "one of status_steps, or 'Exception'",
+    "sender": { "name": "string", "city": "string" },
+    "receiver": { "name": "string", "city": "string", "email": "string (optional)" },
+    "origin": { "city": "string", "lat": "number", "lng": "number" },
+    "destination": { "city": "string", "lat": "number", "lng": "number" },
+    "currentPos": { "lat": "number", "lng": "number" },
+    "driverId": "string or null",
+    "createdAt": "unix timestamp (ms)",
+    "statusHistory": [
+      { "status": "string", "timestamp": "unix timestamp (ms)", "location": "string" }
+    ]
+  },
+  "driver_schema": {
+    "id": "string",
+    "name": "string",
+    "phone": "string",
+    "vehicle": "string",
+    "status": "Available | On Delivery | Break | Off Duty",
+    "pos": { "lat": "number", "lng": "number" },
+    "assignedShipmentId": "string or null"
+  },
+  "notification_schema": {
+    "id": "string",
+    "trackingNumber": "string",
+    "type": "matches a status_steps value or 'Exception'",
+    "recipientEmail": "string",
+    "subject": "string",
+    "timestamp": "unix timestamp (ms)"
+  },
+  "sample_shipments": [
+    {
+      "trackingNumber": "SC100234567",
+      "status": "In Transit",
+      "sender": { "name": "Warehouse — New York, NY", "city": "New York, NY" },
+      "receiver": { "name": "Recipient", "city": "Chicago, IL", "email": "amelia.ross@example.com" },
+      "origin": { "city": "New York, NY", "lat": 40.7128, "lng": -74.0060 },
+      "destination": { "city": "Chicago, IL", "lat": 41.8781, "lng": -87.6298 },
+      "driverId": "d2"
+    }
+  ],
+  "sample_drivers": [
+    { "id": "d1", "name": "Marcus Bell", "phone": "(212) 555-0148", "vehicle": "Sprinter Van · NY-2281", "status": "Available" },
+    { "id": "d2", "name": "Priya Nair", "phone": "(312) 555-0173", "vehicle": "Box Truck · IL-4402", "status": "On Delivery" },
+    { "id": "d3", "name": "Diego Ruiz", "phone": "(602) 555-0199", "vehicle": "Sprinter Van · CA-7761", "status": "On Delivery" },
+    { "id": "d4", "name": "Hana Kim", "phone": "(303) 555-0110", "vehicle": "Box Truck · CO-1190", "status": "Off Duty" }
+  ]
+}
