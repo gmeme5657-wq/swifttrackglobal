@@ -316,6 +316,7 @@ async function renderTrackView(trackingNumber){
   const driver = s.driverId ? DATA.drivers.find(d=>d.id===s.driverId) : null;
   const pct = progressPct(s.status);
   const history = [...s.statusHistory].reverse();
+  const stepIndex = STATUS_STEPS.indexOf(s.status);
 
   el.innerHTML = `
     <button class="back-link" onclick="backHome()">← Track another package</button>
@@ -354,6 +355,23 @@ async function renderTrackView(trackingNumber){
       </div>
     </div>
 
+    <div class="card tracking-progress">
+      <h3>Delivery progress</h3>
+      <div class="progress-summary">Current status: <strong>${s.status}</strong> · Estimated delivery: ${estDeliveryText(s)}</div>
+      <div class="progress-bar"><span style="width:${pct}%"></span></div>
+      <div class="progress-steps">
+        ${STATUS_STEPS.map((step,index)=>{
+          const event = s.statusHistory.find(item=>item.status===step);
+          const complete = index<=stepIndex;
+          return `<div class="progress-step ${complete?'complete':''} ${index===stepIndex?'current':''}">
+            <div class="progress-marker">${complete?'✓':''}</div>
+            <div class="progress-step-name">${step}</div>
+            <div class="progress-step-date">${event?fmtTime(event.timestamp):'Pending'}</div>
+          </div>`;
+        }).join('')}
+      </div>
+    </div>
+
     <div class="grid-2">
       <div class="card">
         <h3>Live location</h3>
@@ -379,6 +397,16 @@ async function renderTrackView(trackingNumber){
           </div>
           <div class="small-note" id="track-email-note">${s.receiver.email? "We'll notify "+escapeHtml(s.receiver.email)+" on every status change." : "Add an email to receive delivery notifications."}</div>
         </div>
+      </div>
+    </div>
+
+    <div class="card tracking-info">
+      <h3>Tracking information</h3>
+      <div class="tracking-info-grid">
+        <div><span>Tracking number</span><strong>${s.trackingNumber}</strong></div>
+        <div><span>Last update</span><strong>${fmtTime(s.updatedAt||s.createdAt)}</strong></div>
+        <div><span>Current location</span><strong>${escapeHtml(s.currentPos.city||s.origin.city)}</strong></div>
+        <div><span>Destination</span><strong>${escapeHtml(s.destination.city)}</strong></div>
       </div>
     </div>
   `;
