@@ -1,0 +1,1 @@
+window.SwiftClientApi={async track(trackingNumber){if(!window.SWIFT_BACKEND_API)return null;const response=await fetch(`${window.SWIFT_BACKEND_API}/api/tracking/${encodeURIComponent(trackingNumber)}`);if(!response.ok)return null;return response.json();}};

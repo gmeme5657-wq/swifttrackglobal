@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>swifttrackglobal — Track &amp; Manage Shipments</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<link rel="stylesheet" href="css/style.css?v=luxury4">
+</head>
+<body>
+<div class="app" id="app">
+
+  <header class="topbar">
+    <div class="brand">
+      <div class="brand-mark">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7h11v10H3z"/><path d="M14 10h4l3 3v4h-7z"/><circle cx="7.5" cy="19" r="1.5"/><circle cx="18" cy="19" r="1.5"/></svg>
+      </div>
+      <div>
+        <div class="brand-name">swifttrackglobal</div>
+        <div class="brand-tag">Logistics Network</div>
+      </div>
+    </div>
+    <nav class="topnav">
+      <button data-nav="home" class="active">Track a package</button>
+       
+    </nav>
+    
+  </header>
+
+  <!-- ================= HOME ================= -->
+  <main id="view-home">
+    <section class="hero">
+      <div class="hero-inner">
+        <div class="hero-eyebrow"><span class="dot"></span> Live network status: operational</div>
+        <h1>Know exactly where it is.</h1>
+        <p class="lead">Enter a tracking number to see live location, delivery progress, and estimated arrival — updated in real time.</p>
+        <div class="track-box">
+          <input id="home-track-input" type="text" placeholder="Enter tracking number, e.g. SC100234567" class="mono" />
+          <button id="home-track-btn">Track</button>
+        </div>
+        
+      </div>
+    </section>
+
+    
+
+  <!-- ================= TRACK RESULT ================= -->
+  <main id="view-track" hidden>
+    <div class="container" id="track-container"></div>
+  </main>
+
+  <!-- Admin moved to a separate page (admin.html) -->
+
+</div>
+
+<script src="js/supabase-config.js"></script><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="js/backend.js"></script><script src="js/app.js"></script>
+</body>
+</html>
