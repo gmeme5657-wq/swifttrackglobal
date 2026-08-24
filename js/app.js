@@ -296,7 +296,9 @@ function goToTracking(trackingNumber){
 /* ============================================================
    TRACK VIEW
 ============================================================ */
-function renderTrackView(trackingNumber){
+async function renderTrackView(trackingNumber){
+  // Refresh shared browser storage so an order created in the admin tab is visible here.
+  await loadData();
   const s = DATA.shipments.find(x=>x.trackingNumber===trackingNumber);
   const el = document.getElementById('track-container');
   showToast('Searching '+trackingNumber+'...', 'info', 1400);
@@ -410,6 +412,17 @@ function saveTrackEmail(trackingNumber){
   document.getElementById('track-email-note').textContent = val ? `We'll notify ${val} on every status change.` : 'Add an email to receive delivery notifications.';
   persist();
 }
+
+window.addEventListener('storage', e=>{
+  if(e.key!==DB_KEY || !e.newValue) return;
+  try{
+    DATA = JSON.parse(e.newValue);
+    if(!DATA.templates) DATA.templates = generateTemplates(40);
+    if(currentTrackingNumber && !document.getElementById('view-track')?.hidden){
+      renderTrackView(currentTrackingNumber);
+    }
+  }catch(error){ console.error('shared shipment update failed', error); }
+});
 
 function backHome(){
   document.querySelectorAll('.topnav button').forEach(b=>b.classList.toggle('active', b.dataset.nav==='home'));
