@@ -59,8 +59,50 @@ window.addEventListener('unhandledrejection', function(e){
 });
 
 const CITIES = {
+  "Montgomery, AL":{lat:32.3777,lng:-86.3006},
+  "Juneau, AK":{lat:58.3019,lng:-134.4197},
+  "Little Rock, AR":{lat:34.7465,lng:-92.2896},
+  "Hartford, CT":{lat:41.7640,lng:-72.6820},
+  "Dover, DE":{lat:39.1573,lng:-75.5197},
   "New York, NY":{lat:40.7128,lng:-74.0060},
+  "Sacramento, CA":{lat:38.5767,lng:-121.4944},
   "Chicago, IL":{lat:41.8781,lng:-87.6298},
+  "Indianapolis, IN":{lat:39.7686,lng:-86.1626},
+  "Des Moines, IA":{lat:41.5911,lng:-93.6037},
+  "Topeka, KS":{lat:39.0482,lng:-95.6779},
+  "Frankfort, KY":{lat:38.1867,lng:-84.8753},
+  "Baton Rouge, LA":{lat:30.4571,lng:-91.1874},
+  "Augusta, ME":{lat:44.3072,lng:-69.7817},
+  "Annapolis, MD":{lat:38.9784,lng:-76.4922},
+  "Boston, MA":{lat:42.3582,lng:-71.0637},
+  "Lansing, MI":{lat:42.7336,lng:-84.5553},
+  "Saint Paul, MN":{lat:44.9551,lng:-93.1022},
+  "Jackson, MS":{lat:32.3038,lng:-90.1821},
+  "Jefferson City, MO":{lat:38.5792,lng:-92.1729},
+  "Helena, MT":{lat:46.5857,lng:-112.0184},
+  "Lincoln, NE":{lat:40.8081,lng:-96.6997},
+  "Carson City, NV":{lat:39.1638,lng:-119.7661},
+  "Concord, NH":{lat:43.2067,lng:-71.5371},
+  "Trenton, NJ":{lat:40.2206,lng:-74.7699},
+  "Santa Fe, NM":{lat:35.6822,lng:-105.9397},
+  "Albany, NY":{lat:42.6528,lng:-73.7579},
+  "Raleigh, NC":{lat:35.7804,lng:-78.6391},
+  "Bismarck, ND":{lat:46.8209,lng:-100.7833},
+  "Columbus, OH":{lat:39.9612,lng:-82.9988},
+  "Oklahoma City, OK":{lat:35.4922,lng:-97.5033},
+  "Salem, OR":{lat:44.9385,lng:-123.0304},
+  "Harrisburg, PA":{lat:40.2644,lng:-76.8836},
+  "Providence, RI":{lat:41.8309,lng:-71.4149},
+  "Columbia, SC":{lat:34.0003,lng:-81.0332},
+  "Pierre, SD":{lat:44.3670,lng:-100.3464},
+  "Nashville, TN":{lat:36.1658,lng:-86.7842},
+  "Salt Lake City, UT":{lat:40.7774,lng:-111.8882},
+  "Montpelier, VT":{lat:44.2624,lng:-72.5805},
+  "Richmond, VA":{lat:37.5389,lng:-77.4336},
+  "Olympia, WA":{lat:47.0358,lng:-122.9050},
+  "Charleston, WV":{lat:38.3362,lng:-81.6123},
+  "Madison, WI":{lat:43.0747,lng:-89.3844},
+  "Cheyenne, WY":{lat:41.1403,lng:-104.8202},
   "Los Angeles, CA":{lat:34.0522,lng:-118.2437},
   "Houston, TX":{lat:29.7604,lng:-95.3698},
   "Phoenix, AZ":{lat:33.4484,lng:-112.0740},
@@ -69,11 +111,14 @@ const CITIES = {
   "Seattle, WA":{lat:47.6062,lng:-122.3321},
   "Miami, FL":{lat:25.7617,lng:-80.1918},
   "Dallas, TX":{lat:32.7767,lng:-96.7970},
+  "Honolulu, HI":{lat:21.3070,lng:-157.8584},
+  "Boise, ID":{lat:43.6178,lng:-116.1997},
   "Toronto, ON":{lat:43.6532,lng:-79.3832},
   "Vancouver, BC":{lat:49.2827,lng:-123.1207},
   "Montreal, QC":{lat:45.5017,lng:-73.5673},
   "Calgary, AB":{lat:51.0447,lng:-114.0719},
   "Ottawa, ON":{lat:45.4215,lng:-75.6972},
+  "Canada":{lat:56.1304,lng:-106.3468},
   "Mexico City, MX":{lat:19.4326,lng:-99.1332},
   "Guadalajara, MX":{lat:20.6597,lng:-103.3496},
   "Monterrey, MX":{lat:25.6866,lng:-100.3161},
@@ -866,7 +911,7 @@ const EMAIL_TEMPLATES = {
   "Picked Up":{subject:"Your package has been picked up", body:"A driver has collected your package and it's now heading to our sorting facility."},
   "In Transit":{subject:"Your package is on its way", body:"Your shipment is currently in transit toward its destination. You can follow its live location anytime."},
   "Out for Delivery":{subject:"Out for delivery today", body:"Your package is out for delivery and should arrive today. A driver is en route to the destination address."},
-  "Delivered":{subject:"Your package has been delivered", body:"Your package has arrived at its destination. Thanks for shipping with swifttrackglobal."},
+  "Delivered":{subject:"Your package has been delivered", body:"Your package has arrived at its destination. Thanks for shipping with swiftcargosolutions."},
   "Exception":{subject:"An update on your shipment", body:"We've flagged an issue with your shipment that our team is working to resolve. We'll follow up shortly with more information."}
 };
 let selectedTemplate = "In Transit";
@@ -902,7 +947,7 @@ function renderEmailPreview(){
   document.getElementById('email-preview-wrap').innerHTML = `
     <div class="email-card">
       <div class="email-card-head">
-        <div style="font-family:var(--font-display);font-weight:700;font-size:16px;">swifttrackglobal</div>
+        <div style="font-family:var(--font-display);font-weight:700;font-size:16px;">swiftcargosolutions</div>
       </div>
       <div class="email-card-body">
         <h4>${tpl.subject}</h4>
