@@ -1,4 +1,4 @@
-# swifttrackglobal — Tracking Website + Admin Dashboard
+# swiftcargosolutions — Tracking Website + Admin Dashboard
 
 A complete courier / delivery tracking site: a customer-facing tracking page with a live map,
 and a separate admin dashboard for managing shipments, drivers, and email notifications.
@@ -57,6 +57,6 @@ Swapping `loadData()` / `persist()` in `js/app.js` to call your API instead of `
 
 ## Customizing
 
-- **Branding/name:** search `js/app.js` and `index.html` for "swifttrackglobal".
+- **Branding/name:** search `js/app.js` and `index.html` for "swiftcargosolutions".
 - **Colors:** all defined as CSS variables at the top of `css/style.css` (`:root { ... }`).
 - **Cities/routes:** edit the `CITIES` object in `js/app.js`.

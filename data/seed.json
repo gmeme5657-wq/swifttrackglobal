@@ -1,5 +1,5 @@
 {
-  "_readme": "This file documents the data schema used by swifttrackglobal. The live site seeds itself automatically in the browser's local database on first load (see js/app.js -> seedData()). This file is provided as a reference export / starting point if you migrate to a real backend or database table.",
+  "_readme": "This file documents the data schema used by swiftcargosolutions. The live site seeds itself automatically in the browser's local database on first load (see js/app.js -> seedData()). This file is provided as a reference export / starting point if you migrate to a real backend or database table.",
   "cities": {
     "New York, NY": { "lat": 40.7128, "lng": -74.0060 },
     "Chicago, IL": { "lat": 41.8781, "lng": -87.6298 },
