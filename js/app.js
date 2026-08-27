@@ -16,7 +16,7 @@ window.addEventListener('error', function(e){
       }catch(ex){return false;}
     }
     const reason = e && (e.error || e.message || e);
-    const showOverlay = isOurErrorObj(reason) || window.location.search.indexOf('showErrors=true')!==-1 || localStorage.getItem('swift.debugErrors')==='1';
+    const showOverlay = isOurErrorObj(reason) || window.location.search.indexOf('showErrors=true')!==-1 || getDebugErrorsEnabled();
     if(showOverlay){
       const existing = document.querySelector('.app-error'); if(existing) existing.remove();
       const ov = document.createElement('div'); ov.className='app-error';
@@ -42,7 +42,7 @@ window.addEventListener('unhandledrejection', function(e){
       }catch(ex){return false;}
     }
     const reason = e && e.reason ? e.reason : null;
-    const showOverlay = isOurErrorObj(reason) || window.location.search.indexOf('showErrors=true')!==-1 || localStorage.getItem('swift.debugErrors')==='1';
+    const showOverlay = isOurErrorObj(reason) || window.location.search.indexOf('showErrors=true')!==-1 || getDebugErrorsEnabled();
     if(showOverlay){
       const existing = document.querySelector('.app-error'); if(existing) existing.remove();
       const reasonText = reason && (reason.message || String(reason)) || 'Unknown reason';
@@ -264,10 +264,26 @@ function advanceTo(shipment,targetStatus,now){
    For a production deployment, swap loadData()/persist() to call your API
    instead (see README.md, "Connecting a real backend"). */
 const DB_KEY = 'swift-courier-db-v1';
+function getDebugErrorsEnabled(){
+  try{return localStorage.getItem('swift.debugErrors')==='1';}catch(error){return false;}
+}
+function readLocalData(){
+  try{return localStorage.getItem(DB_KEY);}catch(error){
+    console.warn('Browser storage is unavailable; using in-memory data.', error);
+    return null;
+  }
+}
+function writeLocalData(value){
+  try{localStorage.setItem(DB_KEY,value);return true;}catch(error){
+    console.error('Local browser storage is unavailable; changes will last only for this session.', error);
+    showToast('Browser storage is unavailable; changes may not persist.', 'error', 5000);
+    return false;
+  }
+}
 
 async function loadData(){
   try{
-    const raw = localStorage.getItem(DB_KEY);
+    const raw = readLocalData();
     if(raw){
       DATA = JSON.parse(raw);
       // ensure templates exist for backwards compatibility
@@ -286,7 +302,7 @@ async function persist(force){
     return;
   }
   try{
-    localStorage.setItem(DB_KEY, JSON.stringify(DATA));
+    writeLocalData(JSON.stringify(DATA));
     if(window.SwiftBackend?.ready) {
       Promise.all(DATA.shipments.map(shipment=>window.SwiftBackend.upsertShipment(shipment)))
         .catch(error=>console.error('cloud shipment sync failed', error));
@@ -302,11 +318,12 @@ function cloudShipmentToLocal(row){
     id:row.id,
     trackingNumber:row.tracking_number,
     status:row.status||'Order Placed',
-    sender:{...(existing?.sender||{}),name:row.sender_name||'Warehouse',city:row.origin_city||''},
-    receiver:{...(existing?.receiver||{}),name:row.receiver_name||'Recipient',email:row.receiver_email||''},
+    sender:{...(existing?.sender||{}),name:row.sender_name||'Warehouse',address:row.sender_address||'',city:row.origin_city||''},
+    receiver:{...(existing?.receiver||{}),name:row.receiver_name||'Recipient',email:row.receiver_email||'',address:row.receiver_address||''},
     origin:{city:row.origin_city||'',lat:Number(row.origin_lat),lng:Number(row.origin_lng)},
     destination:{city:row.destination_city||'',lat:Number(row.destination_lat),lng:Number(row.destination_lng)},
     currentPos:{lat:Number(row.current_lat),lng:Number(row.current_lng)},
+    driverId:row.driver_id||existing?.driverId||null,
     createdAt:row.created_at ? new Date(row.created_at).getTime() : (existing?.createdAt||Date.now()),
     statusHistory:existing?.statusHistory||[{status:row.status||'Order Placed',timestamp:Date.now(),location:row.origin_city||''}]
   };

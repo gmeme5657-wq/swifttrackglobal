@@ -34,9 +34,20 @@ When Supabase is configured, the dashboard uses the owner email and password fro
 Supabase Auth instead of the demo passcode. This is required for authenticated
 multi-device writes.
 
-## The "database"
+## Data storage and multi-device operation
 
-The site keeps a localStorage fallback for offline demos. For multi-device operation, configure `js/supabase-config.js` with a Supabase URL and anon key, run `supabase-schema.sql`, and enable Realtime for the `shipments` table. Client tracking then reads shared shipment rows and receives live updates while the dashboard is open on another device. Never put a Supabase service-role key in the browser.
+The deployed GitHub Pages site currently runs in offline demo mode because
+`js/supabase-config.js` contains empty connection settings. In this mode,
+shipments are stored in each browser's localStorage, so an admin change on one
+device is **not** visible to customers or other devices.
+
+For real admin-to-client synchronization, configure `js/supabase-config.js`
+with a Supabase URL and anon key, run `supabase-schema.sql`, and enable
+Realtime for the `shipments` table. The client then reads shared shipment rows
+and the dashboard writes updates to the same database. Never put a Supabase
+service-role key in the browser. GitHub Pages cannot run the optional
+`backend/` Node server; host that server separately and set
+`backendApiUrl` only when it is publicly reachable over HTTPS.
 
 `data/seed.json` documents the local schema, while `supabase-schema.sql` is the shared database schema and access policies.
 

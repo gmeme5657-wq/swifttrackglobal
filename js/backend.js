@@ -35,6 +35,7 @@ async upsertShipment(shipment){
     current_lat:shipment.currentPos?.lat,
     current_lng:shipment.currentPos?.lng,
     status:shipment.status||"Order Placed",
+    driver_id:shipment.driverId||null,
     updated_at:new Date().toISOString()
   };
   const result=await this.client.from("shipments").upsert(row,{onConflict:"tracking_number"}).select().single();
