@@ -22,7 +22,7 @@ swift-courier/
 
 ## Admin dashboard
 
-Click **Admin dashboard** in the top nav. Demo passcode:
+Open `admin.html`. Offline demo mode uses this passcode:
 
 ```
 admin221r
@@ -30,11 +30,15 @@ admin221r
 
 Change this by editing the check in `js/app.js` (search for `admin221r`).
 
+When Supabase is configured, the dashboard uses the owner email and password from
+Supabase Auth instead of the demo passcode. This is required for authenticated
+multi-device writes.
+
 ## The "database"
 
-This build uses the browser's built-in **localStorage** as a small local database — it persists shipments, drivers, and notifications between visits with zero setup, and needs no server. It's per-browser (not shared between different visitors), which is normal for a self-contained static demo.
+The site keeps a localStorage fallback for offline demos. For multi-device operation, configure `js/supabase-config.js` with a Supabase URL and anon key, run `supabase-schema.sql`, and enable Realtime for the `shipments` table. Client tracking then reads shared shipment rows and receives live updates while the dashboard is open on another device. Never put a Supabase service-role key in the browser.
 
-`data/seed.json` documents the exact schema (shipments, drivers, notifications) so you — or a developer — can wire it up to a real backend later.
+`data/seed.json` documents the local schema, while `supabase-schema.sql` is the shared database schema and access policies.
 
 ## Try the demo
 

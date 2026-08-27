@@ -132,13 +132,22 @@ const CITIES = {
   "Caracas, VE":{lat:10.4806,lng:-66.9036}
 };
 const STATUS_STEPS = ["Order Placed","Picked Up","In Transit","Out for Delivery","Delivered"];
+const CARGO_ITEM_TYPES = ["Goods","Puppy","Pet","Documents","Equipment","Fragile","Perishable","Other"];
 
 function lerp(a,b,t){return a+(b-a)*t;}
 function dist(a,b){return Math.hypot(a.lat-b.lat,a.lng-b.lng);}
 function fmtTime(ts){const d=new Date(ts);return d.toLocaleString(undefined,{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'});}
+function fmtDateShort(ts){const d=new Date(ts);return d.toLocaleDateString(undefined,{month:'short',day:'numeric',year:'numeric'});}
+function fmtDateCompact(ts){const d=new Date(ts);return d.toLocaleDateString(undefined,{month:'short',day:'numeric',year:'numeric'});}
+function getShipmentDate(shipment, status){
+  if(!shipment || !shipment.statusHistory || !shipment.statusHistory.length) return null;
+  const match = [...shipment.statusHistory].reverse().find(item => item && item.status === status);
+  return match ? match.timestamp : null;
+}
 function statusClass(s){return 'status-'+s.replace(/\s+/g,'-');}
 function initials(name){return name.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();}
 function genTracking(){return 'SC'+Math.floor(100000000+Math.random()*899999999);}
+function money(value){return '$'+Number(value || 0).toFixed(2);}
 
 function generateTemplates(n){
   const cityNames = Object.keys(CITIES);
@@ -278,7 +287,69 @@ async function persist(force){
   }
   try{
     localStorage.setItem(DB_KEY, JSON.stringify(DATA));
+    if(window.SwiftBackend?.ready) {
+      Promise.all(DATA.shipments.map(shipment=>window.SwiftBackend.upsertShipment(shipment)))
+        .catch(error=>console.error('cloud shipment sync failed', error));
+    }
   }catch(e){ console.error('local database save failed', e); }
+}
+
+function cloudShipmentToLocal(row){
+  if(!row) return null;
+  const existing = DATA && DATA.shipments.find(s=>s.trackingNumber===row.tracking_number);
+  const shipment = {
+    ...(existing||{}),
+    id:row.id,
+    trackingNumber:row.tracking_number,
+    status:row.status||'Order Placed',
+    sender:{...(existing?.sender||{}),name:row.sender_name||'Warehouse',city:row.origin_city||''},
+    receiver:{...(existing?.receiver||{}),name:row.receiver_name||'Recipient',email:row.receiver_email||''},
+    origin:{city:row.origin_city||'',lat:Number(row.origin_lat),lng:Number(row.origin_lng)},
+    destination:{city:row.destination_city||'',lat:Number(row.destination_lat),lng:Number(row.destination_lng)},
+    currentPos:{lat:Number(row.current_lat),lng:Number(row.current_lng)},
+    createdAt:row.created_at ? new Date(row.created_at).getTime() : (existing?.createdAt||Date.now()),
+    statusHistory:existing?.statusHistory||[{status:row.status||'Order Placed',timestamp:Date.now(),location:row.origin_city||''}]
+  };
+  const last=shipment.statusHistory[shipment.statusHistory.length-1];
+  if(!last || last.status!==shipment.status) shipment.statusHistory.push({status:shipment.status,timestamp:row.updated_at?new Date(row.updated_at).getTime():Date.now(),location:row.destination_city||''});
+  return shipment;
+}
+
+async function loadCloudTracking(trackingNumber){
+  let row=null;
+  if(window.SwiftClientApi && window.SWIFT_BACKEND_API){
+    const result=await window.SwiftClientApi.track(trackingNumber);
+    row=result?.shipment||null;
+  } else if(window.SwiftBackend?.ready){
+    row=await window.SwiftBackend.getShipmentByTracking(trackingNumber);
+  }
+  if(!row) return null;
+  const shipment=cloudShipmentToLocal(row);
+  const index=DATA.shipments.findIndex(s=>s.trackingNumber===trackingNumber);
+  if(index>=0) DATA.shipments[index]=shipment; else DATA.shipments.unshift(shipment);
+  return shipment;
+}
+
+function subscribeToCloudShipments(){
+  if(!window.SwiftBackend?.ready || window._swiftShipmentSubscription) return;
+  window._swiftShipmentSubscription=window.SwiftBackend.subscribeShipments(payload=>{
+    if(payload.eventType==='DELETE'){
+      const deleted=payload.old;
+      const deletedIndex=DATA.shipments.findIndex(s=>s.id===deleted?.id || s.trackingNumber===deleted?.tracking_number);
+      if(deletedIndex>=0) DATA.shipments.splice(deletedIndex,1);
+      if(currentTrackingNumber && (currentTrackingNumber===deleted?.tracking_number || !DATA.shipments.some(s=>s.trackingNumber===currentTrackingNumber))){
+        backHome();
+      }
+      if(document.getElementById('admin-shell') && !document.getElementById('admin-shell').hidden) renderAdminSub(currentAdminSub);
+      return;
+    }
+    const shipment=cloudShipmentToLocal(payload.new);
+    if(!shipment) return;
+    const index=DATA.shipments.findIndex(s=>s.trackingNumber===shipment.trackingNumber);
+    if(index>=0) DATA.shipments[index]=shipment; else DATA.shipments.unshift(shipment);
+    if(currentTrackingNumber===shipment.trackingNumber) renderTrackView(currentTrackingNumber);
+    if(document.getElementById('admin-shell') && !document.getElementById('admin-shell').hidden) renderAdminSub(currentAdminSub);
+  });
 }
 
 /* ============================================================
@@ -307,16 +378,22 @@ const _homeInput = document.getElementById('home-track-input');
 if(_homeBtn) _homeBtn.addEventListener('click', doHomeTrack);
 if(_homeInput) _homeInput.addEventListener('keydown', e=>{ if(e.key==='Enter') doHomeTrack(); });
 
-function doHomeTrack(){
-  const el = document.getElementById('home-track-input');
-  if(!el) return;
-  let val = el.value.trim().toUpperCase();
-  if(!val) return;
-  // allow users to paste numbers without SC prefix
+function normalizeTrackingNumber(raw){
+  if(!raw) return '';
+  let val = String(raw).trim().toUpperCase();
+  if(!val) return '';
   if(!/^SC\d+/.test(val)){
     const maybe = 'SC'+val.replace(/[^0-9]/g,'');
     if(maybe.length>2) val = maybe;
   }
+  return val;
+}
+
+function doHomeTrack(){
+  const el = document.getElementById('home-track-input');
+  if(!el) return;
+  const val = normalizeTrackingNumber(el.value);
+  if(!val) return;
   goToTracking(val);
 }
 
@@ -345,7 +422,15 @@ function goToTracking(trackingNumber){
 async function renderTrackView(trackingNumber){
   // Refresh shared browser storage so an order created in the admin tab is visible here.
   await loadData();
-  const s = DATA.shipments.find(x=>x.trackingNumber===trackingNumber);
+  let s = DATA.shipments.find(x=>x.trackingNumber===trackingNumber);
+  if(window.SwiftBackend?.ready){
+    try{
+      s = await loadCloudTracking(trackingNumber) || s;
+    }catch(error){
+      console.error('cloud tracking load failed', error);
+      showToast('Live tracking is temporarily unavailable. Showing cached data.', 'error', 3500);
+    }
+  }
   const el = document.getElementById('track-container');
   showToast('Searching '+trackingNumber+'...', 'info', 1400);
   if(!s){
@@ -359,102 +444,133 @@ async function renderTrackView(trackingNumber){
     return;
   }
   showToast('Shipment found — opening map', 'success', 1000);
-  const driver = s.driverId ? DATA.drivers.find(d=>d.id===s.driverId) : null;
-  const pct = progressPct(s.status);
-  const history = [...s.statusHistory].reverse();
-  const stepIndex = STATUS_STEPS.indexOf(s.status);
+  const displayStatusSteps = [
+    {key:'Order Placed', label:'Order Received', date:getShipmentDate(s,'Order Placed')},
+    {key:'Picked Up', label:'In Transit', date:getShipmentDate(s,'Picked Up')},
+    {key:'In Transit', label:'On Sorting Center', date:getShipmentDate(s,'In Transit')},
+    {key:'Out for Delivery', label:'On the Way', date:getShipmentDate(s,'Out for Delivery')},
+    {key:'Delivered', label:'Delivered', date:getShipmentDate(s,'Delivered')}
+  ];
+  const stepIndex = displayStatusSteps.findIndex(step => step.key === s.status || step.label === s.status);
+  const orderNumber = `#${String(s.trackingNumber).replace(/[^0-9]/g,'').slice(-6) || '000000'}`;
+  const currentStatusText = s.status || 'Order Placed';
+  const lastStep = s.statusHistory && s.statusHistory.length ? s.statusHistory[s.statusHistory.length - 1] : null;
+  const locationText = getShipmentLocationText(s, lastStep);
+  const itemRows = getShipmentItems(s);
+  const subtotal = itemRows.reduce((sum,row)=>sum + row.price * row.qty, 0);
+  const customerName = s.receiver.name || 'Jane Smith';
+  const pickupLocation = s.sender.name || 'Warehouse';
+  const pickupDate = fmtDateShort(s.createdAt || Date.now());
+  const estDate = fmtDateShort(new Date((s.createdAt || Date.now()) + 1000*60*60*24*8).getTime());
 
   el.innerHTML = `
     <button class="back-link" onclick="backHome()">← Track another package</button>
-    <div class="ticket">
-      <div class="ticket-top">
-        <div>
-          <div class="ticket-package-name">${escapeHtml(s.packageName||'Shipment')}</div>
-          <div class="ticket-num-label">Tracking number</div>
-          <div class="ticket-num">${s.trackingNumber}</div>
+    <div class="track-shell">
+      <div class="track-order-card">
+        <div class="track-order-header">
+          <div class="track-order-id">Order ${orderNumber}</div>
         </div>
-        <div class="status-pill ${statusClass(s.status)}"><span class="dot"></span>${s.status}</div>
-      </div>
-      <div class="perforation"></div>
-      <div class="ticket-route">
-        <div class="route-endpoint"><div class="city">${s.origin.city.split(',')[0]}</div><div class="label">Origin</div></div>
-        <div class="ribbon-wrap">
-          <div class="ribbon"><div class="ribbon-fill" style="width:${pct}%"></div></div>
-          <div class="ribbon-checks">
-            ${STATUS_STEPS.map((st,i)=>{
-              const stepIdx = STATUS_STEPS.indexOf(s.status);
-              let cls='check'; if(i<stepIdx) cls+=' done'; else if(i===stepIdx) cls+=' done'+(i===stepIdx?' current':'');
-              if(i===stepIdx) cls='check done current';
-              else if(i<stepIdx) cls='check done';
-              else cls='check';
-              return `<div class="${cls}"></div>`;
-            }).join('')}
+
+        <div class="track-status-banner">
+          <div class="track-status-badge">${currentStatusText}</div>
+          <div class="track-status-copy">
+            <span><strong>Current status:</strong> ${currentStatusText}</span>
+            <span>Last updated: ${lastStep ? fmtTime(lastStep.timestamp) : 'Pending'}</span>
+            <span>Location: ${escapeHtml(locationText)}</span>
           </div>
-          <div class="ribbon-labels">${STATUS_STEPS.map(st=>`<span>${st}</span>`).join('')}</div>
         </div>
-        <div class="route-endpoint dest"><div class="city">${s.destination.city.split(',')[0]}</div><div class="label">Destination</div></div>
-      </div>
-      <div class="ticket-meta">
-        <div class="meta-item"><div class="label">Sender</div><div class="value">${s.sender.name}</div></div>
-        <div class="meta-item"><div class="label">Receiver</div><div class="value">${s.receiver.name}, ${s.receiver.city}</div></div>
-        <div class="meta-item"><div class="label">Est. delivery</div><div class="value">${estDeliveryText(s)}</div></div>
-        ${driver?`<div class="meta-item"><div class="label">Driver</div><div class="value">${driver.name}</div></div>`:''}
-      </div>
-    </div>
 
-    <div class="card tracking-progress">
-      <h3>Delivery progress</h3>
-      <div class="progress-summary">Current status: <strong>${s.status}</strong> · Estimated delivery: ${estDeliveryText(s)}</div>
-      <div class="progress-bar"><span style="width:${pct}%"></span></div>
-      <div class="progress-steps">
-        ${STATUS_STEPS.map((step,index)=>{
-          const event = s.statusHistory.find(item=>item.status===step);
-          const complete = index<=stepIndex;
-          return `<div class="progress-step ${complete?'complete':''} ${index===stepIndex?'current':''}">
-            <div class="progress-marker">${complete?'✓':''}</div>
-            <div class="progress-step-name">${step}</div>
-            <div class="progress-step-date">${event?fmtTime(event.timestamp):'Pending'}</div>
-          </div>`;
-        }).join('')}
-      </div>
-    </div>
-
-    <div class="grid-2">
-      <div class="card">
-        <h3>Live location</h3>
-        <div id="track-map"></div>
-      </div>
-      <div class="card">
-        <h3>Status history</h3>
-        <div>
-          ${history.map(h=>`
-            <div class="history-item">
-              <div class="history-dot"></div>
-              <div>
-                <div class="history-text">${h.status}</div>
-                <div class="history-sub">${fmtTime(h.timestamp)} · ${h.location}</div>
+        <div class="track-steps">
+          ${displayStatusSteps.map((step, index) => {
+            const isDone = index <= (stepIndex >= 0 ? stepIndex : 0);
+            const isCurrent = index === (stepIndex >= 0 ? stepIndex : 0);
+            return `
+              <div class="track-step ${isDone ? 'done' : ''} ${isCurrent ? 'current' : ''}">
+                <div class="track-step-badge">${index + 1}</div>
+                <div class="track-step-name">${step.label}</div>
+                <div class="track-step-date">${step.date ? fmtDateCompact(step.date) : 'Pending'}</div>
               </div>
-            </div>`).join('')}
+            `;
+          }).join('')}
         </div>
-        <div style="margin-top:16px;padding-top:16px;border-top:1px solid var(--border);">
-          <h3 style="margin-bottom:8px;">Get email updates</h3>
-          <div class="email-capture">
-            <input type="email" id="track-email-input" placeholder="your@email.com" value="${s.receiver.email||''}"/>
-            <button onclick="saveTrackEmail('${s.trackingNumber}')">Save</button>
-          </div>
-          <div class="small-note" id="track-email-note">${s.receiver.email? "We'll notify "+escapeHtml(s.receiver.email)+" on every status change." : "Add an email to receive delivery notifications."}</div>
-        </div>
-      </div>
-    </div>
 
-    <div class="card tracking-info">
-      <h3>Tracking information</h3>
-      <div class="tracking-info-grid">
-        <div><span>Package</span><strong>${escapeHtml(s.packageName||'Shipment')}</strong></div>
-        <div><span>Tracking number</span><strong>${s.trackingNumber}</strong></div>
-        <div><span>Last update</span><strong>${fmtTime(s.updatedAt||s.createdAt)}</strong></div>
-        <div><span>Current location</span><strong>${escapeHtml(s.statusHistory[s.statusHistory.length-1]?.location||s.origin.city)}</strong></div>
-        <div><span>Destination</span><strong>${escapeHtml(s.destination.city)}</strong></div>
+        <div class="track-info-row">
+          <div class="track-info-box">
+            <div class="track-box-title">Order Information</div>
+            <div class="track-box-label">Pickup Date</div>
+            <div class="track-box-value">${pickupDate}</div>
+            <div class="track-box-label">Estimate Drop</div>
+            <div class="track-box-value">${estDate}</div>
+            <div class="track-box-label">Return / Refund</div>
+            <div class="track-box-value">In 7 Days</div>
+          </div>
+
+          <div class="track-info-box">
+            <div class="track-box-title">Locations</div>
+            <div class="track-box-label">Pickup Location</div>
+            <div class="track-box-value">${escapeHtml(pickupLocation)}</div>
+            <div class="track-box-label">Dropoff Location</div>
+            <div class="track-box-value">${escapeHtml(s.destination.city)}</div>
+          </div>
+
+          <div class="track-info-box">
+            <div class="track-box-title">Customer Details</div>
+            <div class="track-box-label">Full Name</div>
+            <div class="track-box-value">${escapeHtml(customerName)}</div>
+            <div class="track-box-label">Email</div>
+            <div class="track-box-value">${escapeHtml(s.receiver.email || 'mail@padgone.com')}</div>
+            <div class="track-box-label">Phone Number</div>
+            <div class="track-box-value">+ 369-1212</div>
+          </div>
+        </div>
+
+        ${itemRows.length ? `
+          <div class="track-item-wrap">
+            <div class="track-item-title">Item List</div>
+            <table class="track-items">
+              <thead>
+                <tr>
+                  <th>No</th>
+                  <th>Type</th>
+                  <th>Item Name</th>
+                  <th>Base Price</th>
+                  <th>Quantity</th>
+                  <th>Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${itemRows.map((row, idx) => `
+                  <tr>
+                    <td>${idx + 1}</td>
+                    <td><span class="cargo-type">${escapeHtml(row.type)}</span></td>
+                    <td class="item-name-cell"><span class="item-thumb" aria-hidden="true"></span>${escapeHtml(row.name)}</td>
+                    <td>${money(row.price)}</td>
+                    <td>${row.qty}</td>
+                    <td>${money(row.price * row.qty)}</td>
+                  </tr>
+                `).join('')}
+              </tbody>
+              <tfoot>
+                <tr>
+                  <td colspan="5" class="total-label">All total</td>
+                  <td class="total-value">${money(subtotal)}</td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        ` : ''}
+
+        <div class="track-map-wrap">
+          <div class="track-map-head">
+            <div>
+              <div class="track-box-title">Live Route Map</div>
+              <div class="track-map-meta">${escapeHtml(s.origin.city)} to ${escapeHtml(s.destination.city)}</div>
+            </div>
+            <div class="track-map-coords mono">${formatCoords(s.currentPos)}</div>
+          </div>
+          <div id="track-map"></div>
+          <div id="track-map-fallback" class="track-map-fallback" hidden></div>
+        </div>
       </div>
     </div>
   `;
@@ -489,6 +605,18 @@ function saveTrackEmail(trackingNumber){
   persist();
 }
 
+function getShipmentItems(shipment){
+  if(!shipment || !Array.isArray(shipment.items)) return [];
+  return shipment.items
+    .map(item => ({
+      type: CARGO_ITEM_TYPES.includes(item.type) ? item.type : 'Goods',
+      name: String(item.name || '').trim(),
+      price: Number(item.price || 0),
+      qty: Math.max(1, Math.floor(Number(item.qty || 1)))
+    }))
+    .filter(item => item.name && Number.isFinite(item.price) && item.price >= 0);
+}
+
 window.addEventListener('storage', e=>{
   if(e.key!==DB_KEY || !e.newValue) return;
   try{
@@ -505,22 +633,78 @@ function backHome(){
   showView('home');
 }
 
+function formatCoords(pos){
+  if(!pos || !Number.isFinite(pos.lat) || !Number.isFinite(pos.lng)) return 'Position pending';
+  return `${pos.lat.toFixed(4)}, ${pos.lng.toFixed(4)}`;
+}
+
+function getShipmentLocationText(s, lastStep){
+  if(!s) return 'Position pending';
+  if(s.currentPos && Number.isFinite(s.currentPos.lat) && Number.isFinite(s.currentPos.lng)){
+    return formatCoords(s.currentPos);
+  }
+  if(lastStep && lastStep.location) return lastStep.location;
+  return s.origin && s.origin.city ? s.origin.city : 'Position pending';
+}
+
+function renderTrackMapFallback(s, message){
+  const map = document.getElementById('track-map');
+  const fallback = document.getElementById('track-map-fallback');
+  if(map) map.hidden = true;
+  if(!fallback) return;
+  fallback.hidden = false;
+  const status = s.status || 'Order Placed';
+  fallback.innerHTML = `
+    <div class="fallback-route">
+      <div class="fallback-node">
+        <span class="fallback-dot origin"></span>
+        <strong>${escapeHtml(s.origin.city)}</strong>
+        <small>Origin</small>
+      </div>
+      <div class="fallback-line">
+        <span style="width:${Math.max(6, Math.min(100, progressPct(status)))}%"></span>
+      </div>
+      <div class="fallback-node">
+        <span class="fallback-dot destination"></span>
+        <strong>${escapeHtml(s.destination.city)}</strong>
+        <small>Destination</small>
+      </div>
+    </div>
+    <div class="fallback-details">
+      <div><span>Status</span><strong>${escapeHtml(status)}</strong></div>
+      <div><span>Live coordinates</span><strong class="mono">${formatCoords(s.currentPos)}</strong></div>
+      <div><span>Map service</span><strong>${escapeHtml(message || 'Route view active')}</strong></div>
+    </div>
+  `;
+}
+
 function initTrackMap(s){
   const container = document.getElementById('track-map');
   if(!container) return;
+  if(!window.L || !s.currentPos || !Number.isFinite(s.currentPos.lat) || !Number.isFinite(s.currentPos.lng)){
+    renderTrackMapFallback(s, window.L ? 'Waiting for live position' : 'Map library unavailable');
+    return;
+  }
   if(trackMapInstance){ trackMapInstance.remove(); trackMapInstance=null; }
-  const center = s.currentPos;
-  trackMapInstance = L.map(container,{zoomControl:true,attributionControl:false}).setView([center.lat,center.lng], 5);
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(trackMapInstance);
+  try{
+    const center = s.currentPos;
+    trackMapInstance = L.map(container,{zoomControl:true,attributionControl:false}).setView([center.lat,center.lng], 5);
+    const tiles = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png');
+    tiles.on('tileerror', ()=>renderTrackMapFallback(s, 'Map tiles unavailable'));
+    tiles.addTo(trackMapInstance);
 
-  const line = L.polyline([[s.origin.lat,s.origin.lng],[s.destination.lat,s.destination.lng]], {color:'#1D6FE0',weight:2,dashArray:'6,7',opacity:.6}).addTo(trackMapInstance);
-  L.circleMarker([s.origin.lat,s.origin.lng],{radius:5,color:'#5B6472',fillColor:'#fff',fillOpacity:1,weight:2}).addTo(trackMapInstance).bindTooltip(s.origin.city,{permanent:false});
-  L.circleMarker([s.destination.lat,s.destination.lng],{radius:5,color:'#5B6472',fillColor:'#fff',fillOpacity:1,weight:2}).addTo(trackMapInstance).bindTooltip(s.destination.city,{permanent:false});
+    const line = L.polyline([[s.origin.lat,s.origin.lng],[s.destination.lat,s.destination.lng]], {color:'#1D6FE0',weight:2,dashArray:'6,7',opacity:.6}).addTo(trackMapInstance);
+    L.circleMarker([s.origin.lat,s.origin.lng],{radius:5,color:'#5B6472',fillColor:'#fff',fillOpacity:1,weight:2}).addTo(trackMapInstance).bindTooltip(s.origin.city,{permanent:false});
+    L.circleMarker([s.destination.lat,s.destination.lng],{radius:5,color:'#5B6472',fillColor:'#fff',fillOpacity:1,weight:2}).addTo(trackMapInstance).bindTooltip(s.destination.city,{permanent:false});
 
-  const color = s.status==='Delivered' ? '#1B8A5A' : (s.status==='Out for Delivery' ? '#C98A1D' : '#1D6FE0');
-  trackMapMarker = L.marker([s.currentPos.lat,s.currentPos.lng],{icon: pulseIcon(color)}).addTo(trackMapInstance);
-  trackMapInstance.fitBounds(line.getBounds(),{padding:[40,40]});
-  setTimeout(()=>trackMapInstance && trackMapInstance.invalidateSize(),150);
+    const color = s.status==='Delivered' ? '#1B8A5A' : (s.status==='Out for Delivery' ? '#C98A1D' : '#1D6FE0');
+    trackMapMarker = L.marker([s.currentPos.lat,s.currentPos.lng],{icon: pulseIcon(color)}).addTo(trackMapInstance);
+    trackMapInstance.fitBounds(line.getBounds(),{padding:[40,40]});
+    setTimeout(()=>trackMapInstance && trackMapInstance.invalidateSize(),150);
+  }catch(error){
+    console.error('track map failed', error);
+    renderTrackMapFallback(s, 'Route fallback active');
+  }
 }
 
 function pulseIcon(color){
@@ -543,7 +727,8 @@ function renderAdminGate(){
     <div class="admin-gate">
       <div class="brand-mark" style="background:var(--navy);"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><rect x="3" y="11" width="18" height="9" rx="1"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg></div>
       <h3>Operations sign in</h3>
-      <p style="font-size:13px;color:var(--text-muted);margin-top:6px;">Enter your passcode to access the dispatch dashboard.</p>
+      <p style="font-size:13px;color:var(--text-muted);margin-top:6px;">Sign in to access the dispatch dashboard.</p>
+      <input type="email" id="admin-email" placeholder="Owner email" autocomplete="username" />
       <input type="password" id="admin-pass" placeholder="Passcode" />
       <button class="btn-primary" style="width:100%;" onclick="tryAdminLogin()">Sign in</button>
       
@@ -551,9 +736,21 @@ function renderAdminGate(){
   document.getElementById('admin-pass').addEventListener('keydown',e=>{if(e.key==='Enter') tryAdminLogin();});
 }
 
-function tryAdminLogin(){
+async function tryAdminLogin(){
+  const email = document.getElementById('admin-email')?.value.trim();
   const val = document.getElementById('admin-pass').value;
-  if(val==='admin221r'){
+  let authenticated = val==='admin221r' && !window.SwiftBackend?.ready;
+  if(window.SwiftBackend?.ready){
+    try{
+      if(!email) throw Error('Enter the owner email.');
+      const result=await window.SwiftBackend.signIn(email,val);
+      if(result.error) throw result.error;
+      authenticated=true;
+    }catch(error){
+      showToast(error.message||'Sign in failed.', 'error');
+    }
+  }
+  if(authenticated){
     isAdminAuthed = true;
     document.getElementById('admin-gate-wrap').hidden = true;
     document.getElementById('admin-shell').hidden = false;
@@ -641,7 +838,7 @@ function renderShipments(main){
     <div class="admin-header"><h2>Shipments</h2><button class="btn-primary" onclick="openNewShipmentModal()">+ New shipment</button></div>
     <div class="table-wrap">
       <table>
-        <thead><tr><th>Tracking #</th><th>Route</th><th>Status</th><th>Driver</th><th>Actions</th></tr></thead>
+        <thead><tr><th>Tracking #</th><th>Route</th><th>Cargo</th><th>Status</th><th>Driver</th><th>Actions</th></tr></thead>
         <tbody id="shipments-tbody"></tbody>
       </table>
     </div>
@@ -655,6 +852,7 @@ function renderShipments(main){
     return `<tr>
       <td class="mono"><a href="#" onclick="event.preventDefault();goToAdminTrackingView('${s.trackingNumber}')" style="color:var(--blue);text-decoration:none;font-weight:600;">${s.trackingNumber}</a></td>
       <td>${s.origin.city.split(',')[0]} → ${s.destination.city.split(',')[0]}</td>
+      <td>${cargoSummary(s)}</td>
       <td><span class="status-pill ${statusClass(s.status)}"><span class="dot"></span>${s.status}</span></td>
       <td>
         <select onchange="assignDriver('${s.trackingNumber}', this.value)">
@@ -664,10 +862,115 @@ function renderShipments(main){
       </td>
       <td class="row-actions">
         ${nextStatus?`<button class="advance" onclick="advanceShipment('${s.trackingNumber}')">Mark ${nextStatus}</button>`:''}
+        <button onclick="openShipmentItemsModal('${s.trackingNumber}')">Items</button>
         <button onclick="markException('${s.trackingNumber}')">Flag issue</button>
+        <button class="danger" onclick="deleteShipment('${s.trackingNumber}')">Delete</button>
       </td>
     </tr>`;
   }).join('');
+}
+
+async function deleteShipment(trackingNumber){
+  const shipment=DATA.shipments.find(s=>s.trackingNumber===trackingNumber);
+  if(!shipment) return;
+  if(!confirm(`Delete shipment ${trackingNumber}? This cannot be undone.`)) return;
+  const driver=shipment.driverId ? DATA.drivers.find(d=>d.id===shipment.driverId) : null;
+  if(driver){
+    driver.status='Available';
+    driver.assignedShipmentId=null;
+  }
+  DATA.shipments=DATA.shipments.filter(s=>s.trackingNumber!==trackingNumber);
+  try{
+    if(window.SwiftBackend?.ready && shipment.id) await window.SwiftBackend.deleteShipment(shipment.id);
+    await persist(true);
+    renderAdminSub(currentAdminSub);
+    if(currentTrackingNumber===trackingNumber) backHome();
+    showToast(`Shipment ${trackingNumber} deleted.`, 'success');
+  }catch(error){
+    DATA.shipments.unshift(shipment);
+    if(driver){
+      driver.status='On Delivery';
+      driver.assignedShipmentId=trackingNumber;
+    }
+    await persist(true);
+    renderAdminSub(currentAdminSub);
+    showToast(error.message||'Could not delete shipment.', 'error');
+  }
+}
+
+function cargoSummary(shipment){
+  const items = getShipmentItems(shipment);
+  if(!items.length) return '<span class="cargo-empty">No items set</span>';
+  const total = items.reduce((sum,item)=>sum + item.price * item.qty, 0);
+  const names = items.slice(0,2).map(item => `${escapeHtml(item.type)}: ${escapeHtml(item.name)}`).join('<br>');
+  const more = items.length > 2 ? `<br><span class="cargo-empty">+${items.length - 2} more</span>` : '';
+  return `<span class="cargo-summary">${names}${more}<br><strong>${items.length} item${items.length === 1 ? '' : 's'} · ${money(total)}</strong></span>`;
+}
+
+function cargoTypeOptions(selected){
+  return CARGO_ITEM_TYPES.map(type => `<option value="${type}" ${type === selected ? 'selected' : ''}>${type}</option>`).join('');
+}
+
+function shipmentItemRow(item){
+  const normalized = item || {};
+  const type = CARGO_ITEM_TYPES.includes(normalized.type) ? normalized.type : 'Goods';
+  const name = escapeHtml(normalized.name || '');
+  const qty = normalized.qty ? Math.max(1, Math.floor(Number(normalized.qty))) : 1;
+  const price = Number.isFinite(Number(normalized.price)) && Number(normalized.price) > 0 ? Number(normalized.price).toFixed(2) : '';
+  return `
+    <div class="cargo-item-row">
+      <div class="field cargo-type-field"><label>Type</label><select class="cargo-item-type">${cargoTypeOptions(type)}</select></div>
+      <div class="field cargo-name-field"><label>Item name</label><input class="cargo-item-name" placeholder="Puppy, crate, laptop, documents" value="${name}"></div>
+      <div class="field cargo-price-field"><label>Price</label><input class="cargo-item-price" type="number" min="0" step="0.01" placeholder="0.00" value="${price}"></div>
+      <div class="field cargo-qty-field"><label>Qty</label><input class="cargo-item-qty" type="number" min="1" step="1" value="${qty}"></div>
+      <button class="cargo-remove-btn" type="button" onclick="removeShipmentItemRow(this)">Remove</button>
+    </div>
+  `;
+}
+
+function addShipmentItemRow(targetId, item){
+  const body = document.getElementById(targetId || 'ns-items-body');
+  if(!body) return;
+  body.insertAdjacentHTML('beforeend', shipmentItemRow(item));
+}
+
+function removeShipmentItemRow(button){
+  const row = button ? button.closest('.cargo-item-row') : null;
+  if(row) row.remove();
+}
+
+function collectShipmentItems(targetId){
+  const body = document.getElementById(targetId);
+  if(!body) return [];
+  const items = [];
+  const rows = Array.from(body.querySelectorAll('.cargo-item-row'));
+  for(const row of rows){
+    const type = row.querySelector('.cargo-item-type')?.value || 'Goods';
+    const name = row.querySelector('.cargo-item-name')?.value.trim() || '';
+    const priceRaw = row.querySelector('.cargo-item-price')?.value.trim() || '';
+    const qtyRaw = row.querySelector('.cargo-item-qty')?.value.trim() || '1';
+    if(!name && !priceRaw) continue;
+    if(!name){
+      showToast('Enter an item name before saving.', 'error');
+      return null;
+    }
+    if(priceRaw === ''){
+      showToast('Enter a price for '+name+'.', 'error');
+      return null;
+    }
+    const price = Number(priceRaw);
+    const qty = Math.max(1, Math.floor(Number(qtyRaw || 1)));
+    if(!Number.isFinite(price) || price < 0){
+      showToast('Enter a valid price for '+name+'.', 'error');
+      return null;
+    }
+    if(!Number.isFinite(qty) || qty < 1){
+      showToast('Enter a valid quantity for '+name+'.', 'error');
+      return null;
+    }
+    items.push({type, name, price, qty});
+  }
+  return items;
 }
 
 function goToAdminTrackingView(tn){
@@ -754,6 +1057,11 @@ function openNewShipmentModal(){
         <div class="field"><label>Destination city</label><select id="ns-dest">${cityOptions}</select></div>
       </div>
       <div class="field"><label>Receiver email (optional)</label><input id="ns-email" type="email" placeholder="name@example.com"/></div>
+      <div class="field cargo-manifest-field">
+        <label>Items being tracked</label>
+        <div class="cargo-items-editor" id="ns-items-body"></div>
+        <button class="btn-secondary cargo-add-btn" type="button" onclick="addShipmentItemRow('ns-items-body')">+ Add item</button>
+      </div>
       <div class="modal-actions">
         <button class="btn-secondary" onclick="closeModal()">Cancel</button>
         <button class="btn-primary" onclick="createShipment()">Create shipment</button>
@@ -761,6 +1069,7 @@ function openNewShipmentModal(){
     </div>`;
   document.body.appendChild(overlay);
   document.getElementById('ns-dest').selectedIndex = 1;
+  addShipmentItemRow('ns-items-body');
   const tplSel = document.getElementById('ns-template');
   if(tplSel){ tplSel.addEventListener('change', ()=>{ populateNewShipmentFromTemplate(tplSel.value); }); }
 }
@@ -787,6 +1096,8 @@ function createShipment(){
   const origin = document.getElementById('ns-origin').value;
   const dest = document.getElementById('ns-dest').value;
   const email = document.getElementById('ns-email').value.trim();
+  const items = collectShipmentItems('ns-items-body');
+  if(items === null) return;
   if(origin===dest){ showToast('Origin and destination must differ.','error'); return; }
   if(email && !/^\S+@\S+\.\S+$/ .test(email)){ showToast("Enter a valid receiver email.", "error"); return; }
   const tn = genTracking();
@@ -798,6 +1109,7 @@ function createShipment(){
     origin:{city:origin, ...CITIES[origin]},
     destination:{city:dest, ...CITIES[dest]},
     currentPos:{...CITIES[origin]},
+    items,
     driverId:null, createdAt:Date.now(),
     statusHistory:[{status:'Order Placed', timestamp:Date.now(), location:origin}]
   };
@@ -807,6 +1119,44 @@ function createShipment(){
   persist();
   renderAdminSub('shipments');
   notifyTrackViewUpdate(s.trackingNumber);
+}
+
+function openShipmentItemsModal(trackingNumber){
+  const shipment = DATA.shipments.find(x=>x.trackingNumber===trackingNumber);
+  if(!shipment) return;
+  const overlay = document.createElement('div');
+  overlay.className='modal-overlay';
+  overlay.innerHTML = `
+    <div class="modal modal-wide">
+      <h3>Shipment items</h3>
+      <div class="modal-sub mono">${escapeHtml(shipment.trackingNumber)}</div>
+      <div class="cargo-items-editor" id="edit-items-body"></div>
+      <button class="btn-secondary cargo-add-btn" type="button" onclick="addShipmentItemRow('edit-items-body')">+ Add item</button>
+      <div class="modal-actions">
+        <button class="btn-secondary" onclick="closeModal()">Cancel</button>
+        <button class="btn-primary" onclick="saveShipmentItems('${shipment.trackingNumber}')">Save items</button>
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
+  const items = getShipmentItems(shipment);
+  if(items.length){
+    items.forEach(item => addShipmentItemRow('edit-items-body', item));
+  } else {
+    addShipmentItemRow('edit-items-body');
+  }
+}
+
+function saveShipmentItems(trackingNumber){
+  const shipment = DATA.shipments.find(x=>x.trackingNumber===trackingNumber);
+  if(!shipment) return;
+  const items = collectShipmentItems('edit-items-body');
+  if(items === null) return;
+  shipment.items = items;
+  persist();
+  closeModal();
+  renderAdminSub('shipments');
+  notifyTrackViewUpdate(trackingNumber);
+  showToast(items.length ? 'Shipment items saved.' : 'Shipment item list cleared.', 'success');
 }
 
 // renderAvailableTracks removed per request: demos are not shown on the client page
@@ -1069,6 +1419,14 @@ function notifyTrackViewUpdate(trackingNumber){
 ============================================================ */
 (async function init(){
   await loadData();
+  await window.SwiftBackend?.init();
+  subscribeToCloudShipments();
+  const trackParam = normalizeTrackingNumber(new URLSearchParams(window.location.search).get('track'));
+  if(trackParam){
+    currentTrackingNumber = trackParam;
+    showView('track');
+    renderTrackView(trackParam);
+  }
 })();
 // removed stray closing sequence
 
@@ -1076,18 +1434,6 @@ function notifyTrackViewUpdate(trackingNumber){
 if(document.getElementById('admin-root')){
   // ensure data loaded and admin UI rendered
   (async ()=>{ await loadData(); renderAdmin(); })();
-}
-
-// If `track` query param provided (e.g. admin links), open that tracking on the client page
-if(!document.getElementById('admin-root')){
-  try{
-    const params = new URLSearchParams(window.location.search);
-    const tn = params.get('track');
-    if(tn){
-      // defer until DATA loaded and UI ready
-      (async ()=>{ await loadData(); goToTracking(tn.toUpperCase()); })();
-    }
-  }catch(e){}
 }
 
 // Thumbnail click -> modal preview
