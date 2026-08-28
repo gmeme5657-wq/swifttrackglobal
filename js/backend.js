@@ -35,7 +35,7 @@ async upsertShipment(shipment){
     current_lat:shipment.currentPos?.lat,
     current_lng:shipment.currentPos?.lng,
     status:shipment.status||"Order Placed",
-    driver_id:shipment.driverId||null,
+    driver_id:/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(shipment.driverId||"")?shipment.driverId:null,
     updated_at:new Date().toISOString()
   };
   const result=await this.client.from("shipments").upsert(row,{onConflict:"tracking_number"}).select().single();
