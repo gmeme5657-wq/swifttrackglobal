@@ -698,8 +698,13 @@ function renderTrackMapFallback(s, message){
 function initTrackMap(s){
   const container = document.getElementById('track-map');
   if(!container) return;
-  if(!window.L || !s.currentPos || !Number.isFinite(s.currentPos.lat) || !Number.isFinite(s.currentPos.lng)){
-    renderTrackMapFallback(s, window.L ? 'Waiting for live position' : 'Map library unavailable');
+  if(!s.currentPos || !Number.isFinite(s.currentPos.lat) || !Number.isFinite(s.currentPos.lng)){
+    renderTrackMapFallback(s, 'Waiting for live position');
+    return;
+  }
+  if(!window.L){
+    renderTrackMapFallback(s, 'Loading interactive map');
+    loadLeaflet(()=>initTrackMap(s));
     return;
   }
   if(trackMapInstance){ trackMapInstance.remove(); trackMapInstance=null; }
@@ -722,6 +727,23 @@ function initTrackMap(s){
     console.error('track map failed', error);
     renderTrackMapFallback(s, 'Route fallback active');
   }
+}
+
+function loadLeaflet(onReady){
+  if(window.L){onReady();return;}
+  if(window._swiftLeafletLoading){window._swiftLeafletLoading.push(onReady);return;}
+  window._swiftLeafletLoading=[onReady];
+  const css=document.createElement('link');
+  css.rel='stylesheet';
+  css.href='https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css';
+  document.head.appendChild(css);
+  const script=document.createElement('script');
+  script.src='https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js';
+  script.async=true;
+  const finish=()=>{const callbacks=window._swiftLeafletLoading||[];window._swiftLeafletLoading=null;callbacks.forEach(callback=>callback());};
+  script.onload=finish;
+  script.onerror=()=>{window._swiftLeafletLoading=null;};
+  document.head.appendChild(script);
 }
 
 function pulseIcon(color){
@@ -1453,13 +1475,29 @@ if(document.getElementById('admin-root')){
   (async ()=>{ await loadData(); renderAdmin(); })();
 }
 
-// Thumbnail click -> modal preview
 document.addEventListener('click', (e)=>{
+  const navToggle = e.target.closest('.nav-toggle');
+  if(navToggle){
+    const wrap = navToggle.closest('.topnav-wrap');
+    if(!wrap) return;
+    const isOpen = wrap.classList.toggle('menu-open');
+    navToggle.setAttribute('aria-expanded', String(isOpen));
+    return;
+  }
+
+  const navButton = e.target.closest('.topnav button');
+  if(navButton) {
+    const wrap = navButton.closest('.topnav-wrap');
+    if(wrap) wrap.classList.remove('menu-open');
+    const toggle = document.querySelector('.nav-toggle');
+    if(toggle) toggle.setAttribute('aria-expanded', 'false');
+  }
+
   const t = e.target.closest('.top-thumbs .thumb');
   if(!t) return;
   const src = t.getAttribute('src');
   const modal = document.createElement('div');
   modal.className = 'img-modal';
-  modal.innerHTML = `<div class="img-wrap"><img src="${src}" alt="Preview"><button class="close-btn" onclick="this.closest('.img-modal').remove();">Close</button></div>`;
+  modal.innerHTML = `<div class="img-wrap"><img src="${src}" alt="Preview" loading="lazy"><button class="close-btn" onclick="this.closest('.img-modal').remove();">Close</button></div>`;
   document.body.appendChild(modal);
 });
