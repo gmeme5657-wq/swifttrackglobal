@@ -51,6 +51,8 @@ async signIn(email,password){if(!this.ready)throw Error("Supabase is not configu
 async signOut(){if(this.client)return this.client.auth.signOut()},
 async recordLocation(driverId,shipmentId,p){if(!this.ready)throw Error("Supabase is not configured yet.");const row={driver_id:driverId,shipment_id:shipmentId,latitude:p.coords.latitude,longitude:p.coords.longitude,accuracy_m:p.coords.accuracy};const result=await this.client.from("driver_locations").insert(row);if(result.error)throw result.error;if(shipmentId){const update=await this.client.from("shipments").update({current_lat:row.latitude,current_lng:row.longitude,updated_at:new Date().toISOString()}).eq("id",shipmentId);if(update.error)throw update.error}},
 async uploadProof(shipmentId,file,signatureName,notes,userId){if(!this.ready)throw Error("Supabase is not configured yet.");let photo_path=null;if(file){photo_path=shipmentId+"/"+Date.now()+"-"+file.name;const result=await this.client.storage.from("delivery-proofs").upload(photo_path,file,{upsert:true});if(result.error)throw result.error}const result=await this.client.from("delivery_proofs").upsert({shipment_id:shipmentId,signature_name:signatureName,notes,photo_path,delivered_at:new Date().toISOString(),created_by:userId});if(result.error)throw result.error}
+,
+async testShipments(){if(!this.ready)throw Error("Supabase is not configured yet.");await this.init();const {data,error}=await this.client.from("shipments").select("*").limit(1);console.log(data,error);return {data,error}}
 };
 window.SwiftBackend.init();
 })();

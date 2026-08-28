@@ -1,7 +1,7 @@
 window.SWIFT_CONFIG={
   // Set these values in the deployed site (never commit a service-role key).
-  supabaseUrl:"",
-  supabaseAnonKey:"",
+  supabaseUrl:"https://ysclhgshfzkesmouuxsw.supabase.co",
+  supabaseAnonKey:"sb_publishable_hbguoqeFk7uyB1kPUaLqhw_kLdHGY4u",
   backendApiUrl:"",
   emailFunctionName:"send-shipment-email"
 };
