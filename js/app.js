@@ -414,15 +414,6 @@ document.querySelectorAll('.topnav button').forEach(btn=>{
   });
 });
 
-const navToggle = document.querySelector('.nav-toggle');
-if(navToggle){
-  navToggle.addEventListener('click', ()=>{
-    const wrap = document.querySelector('.topnav-wrap');
-    const isOpen = wrap && wrap.classList.toggle('menu-open');
-    navToggle.setAttribute('aria-expanded', String(Boolean(isOpen)));
-  });
-}
-
 function showView(name){
   const vHome = document.getElementById('view-home'); if(vHome) vHome.hidden = name!=='home';
   const vTrack = document.getElementById('view-track'); if(vTrack) vTrack.hidden = name!=='track';
