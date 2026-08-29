@@ -467,8 +467,8 @@
     .brand-mark{width:32px;height:32px;}
     .brand-name{font-size:16px;max-width:178px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
     .brand-tag{font-size:10px;}
-    .topnav button{width:50px;padding:8px 0;font-size:0;white-space:nowrap;}
-    .topnav button::before{content:"Track";font-size:12.5px;}
+    .topnav button{width:100%;padding:10px 12px;font-size:0;white-space:nowrap;}
+    .topnav button::before{content:attr(data-mobile-label);font-size:12.5px;display:block;}
     .track-order-card{border-radius:14px;}
     .track-order-header{padding:26px 24px 10px;}
     .track-status-banner{align-items:flex-start;padding:0 24px 18px;}
