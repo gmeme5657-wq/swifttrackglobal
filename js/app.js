@@ -225,12 +225,21 @@ function cryptoId(){return Math.random().toString(36).slice(2,10);}
 function midpoint(a,b,t){return {lat:lerp(a.lat,b.lat,t), lng:lerp(a.lng,b.lng,t)};}
 
 function mkShipment(tracking,status,originCity,destCity,_unused,driverId,createdAt,email){
+  const phoneList = [
+    '+1 (415) 555-0148',
+    '+1 (646) 555-0172',
+    '+1 (310) 555-0191',
+    '+1 (713) 555-0124',
+    '+1 (206) 555-0117',
+    '+1 (404) 555-0166'
+  ];
+  const phone = phoneList[Math.abs((tracking.split('').reduce((sum,ch)=>sum + ch.charCodeAt(0), 0) + Math.floor((createdAt || Date.now()) / 1000)) % phoneList.length)];
   return {
     trackingNumber:tracking,
     packageName:"Shipment "+tracking,
     status:"Order Placed",
     sender:{name:"Warehouse — "+originCity, city:originCity},
-    receiver:{name:"Recipient", city:destCity, email:email||""},
+    receiver:{name:"Recipient", city:destCity, email:email||"", phone:phone},
     origin:{city:originCity, ...CITIES[originCity]},
     destination:{city:destCity, ...CITIES[destCity]},
     currentPos:{...CITIES[originCity]},
@@ -319,7 +328,7 @@ function cloudShipmentToLocal(row){
     trackingNumber:row.tracking_number,
     status:row.status||'Order Placed',
     sender:{...(existing?.sender||{}),name:row.sender_name||'Warehouse',address:row.sender_address||'',city:row.origin_city||''},
-    receiver:{...(existing?.receiver||{}),name:row.receiver_name||'Recipient',email:row.receiver_email||'',address:row.receiver_address||''},
+    receiver:{...(existing?.receiver||{}),name:row.receiver_name||'Recipient',email:row.receiver_email||'',phone:row.receiver_phone||'',address:row.receiver_address||''},
     origin:{city:row.origin_city||'',lat:Number(row.origin_lat),lng:Number(row.origin_lng)},
     destination:{city:row.destination_city||'',lat:Number(row.destination_lat),lng:Number(row.destination_lng)},
     currentPos:{lat:Number(row.current_lat),lng:Number(row.current_lng)},
@@ -376,15 +385,55 @@ document.querySelectorAll('.topnav button').forEach(btn=>{
   btn.addEventListener('click',()=>{
     document.querySelectorAll('.topnav button').forEach(b=>b.classList.remove('active'));
     btn.classList.add('active');
-    showView(btn.dataset.nav);
+    const toggle = document.querySelector('.nav-toggle');
+    const wrap = document.querySelector('.topnav-wrap');
+    if(toggle){ toggle.setAttribute('aria-expanded', 'false'); }
+    if(wrap){ wrap.classList.remove('menu-open'); }
+
+    const nav = btn.dataset.nav;
+    if(nav === 'home'){
+      showView('home');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
+    if(nav === 'tracking' || nav === 'services' || nav === 'policies' || nav === 'contact'){
+      if(document.getElementById('view-track') && !document.getElementById('view-track').hidden){
+        showView('home');
+      }
+      const targetId = nav === 'tracking' ? 'track-form-anchor' : nav;
+      const target = document.getElementById(targetId);
+      if(target){
+        requestAnimationFrame(()=>{
+          target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        });
+      }
+      return;
+    }
+
+    showView(nav);
   });
 });
+
+const navToggle = document.querySelector('.nav-toggle');
+if(navToggle){
+  navToggle.addEventListener('click', ()=>{
+    const wrap = document.querySelector('.topnav-wrap');
+    const isOpen = wrap && wrap.classList.toggle('menu-open');
+    navToggle.setAttribute('aria-expanded', String(Boolean(isOpen)));
+  });
+}
 
 function showView(name){
   const vHome = document.getElementById('view-home'); if(vHome) vHome.hidden = name!=='home';
   const vTrack = document.getElementById('view-track'); if(vTrack) vTrack.hidden = name!=='track';
   const vAdmin = document.getElementById('view-admin'); if(vAdmin) vAdmin.hidden = name!=='admin';
   if(name==='admin') renderAdmin();
+  if(name==='home' && vTrack){ vTrack.hidden = true; }
+
+  document.body.classList.remove('page-transition');
+  void document.body.offsetWidth;
+  document.body.classList.add('page-transition');
+  setTimeout(()=> document.body.classList.remove('page-transition'), 240);
 }
 
 /* ============================================================
@@ -399,19 +448,43 @@ function normalizeTrackingNumber(raw){
   if(!raw) return '';
   let val = String(raw).trim().toUpperCase();
   if(!val) return '';
-  if(!/^SC\d+/.test(val)){
-    const maybe = 'SC'+val.replace(/[^0-9]/g,'');
-    if(maybe.length>2) val = maybe;
+  if(/^SC\d+/.test(val)) return val;
+  const digits = val.replace(/[^0-9]/g,'');
+  if(digits) return 'SC' + digits;
+  return '';
+}
+
+function normalizePhoneNumber(raw){
+  if(!raw) return '';
+  return String(raw).replace(/\D/g, '');
+}
+
+function shipmentMatchesIdentifier(shipment, query){
+  if(!shipment || !query) return false;
+  const text = String(query).trim();
+  if(!text) return false;
+  if(window.SwiftTrackingUtils?.matchesShipmentIdentifier) {
+    return window.SwiftTrackingUtils.matchesShipmentIdentifier(shipment, text);
   }
-  return val;
+
+  const normalizedTracking = normalizeTrackingNumber(text);
+  if(normalizedTracking && normalizeTrackingNumber(shipment?.trackingNumber || '') === normalizedTracking) return true;
+
+  const shipmentPhone = normalizePhoneNumber(shipment?.receiver?.phone || shipment?.receiver?.phoneNumber || shipment?.receiver?.phone_number || shipment?.receiver?.mobile || '');
+  const queryPhone = normalizePhoneNumber(text);
+  if(!shipmentPhone || !queryPhone) return false;
+  return shipmentPhone.includes(queryPhone) || queryPhone.includes(shipmentPhone);
 }
 
 function doHomeTrack(){
   const el = document.getElementById('home-track-input');
   if(!el) return;
-  const val = normalizeTrackingNumber(el.value);
-  if(!val) return;
-  goToTracking(val);
+  const raw = el.value.trim();
+  const val = normalizeTrackingNumber(raw);
+  const phone = normalizePhoneNumber(raw);
+  if(!val && !phone) return;
+  const lookup = raw && !/^SC\d+/i.test(raw) && /\d/.test(raw) && !/^SC/i.test(raw) ? raw : val;
+  goToTracking(lookup);
 }
 
 // Toast / snackbar helper
@@ -439,27 +512,32 @@ function goToTracking(trackingNumber){
 async function renderTrackView(trackingNumber){
   // Refresh shared browser storage so an order created in the admin tab is visible here.
   await loadData();
-  let s = DATA.shipments.find(x=>x.trackingNumber===trackingNumber);
+  const identifier = String(trackingNumber || '').trim();
+  let s = DATA.shipments.find(x => shipmentMatchesIdentifier(x, identifier));
   if(window.SwiftBackend?.ready){
     try{
-      s = await loadCloudTracking(trackingNumber) || s;
+      const cloudMatch = await window.SwiftBackend.getShipmentByTracking(normalizeTrackingNumber(identifier));
+      if(cloudMatch) {
+        s = cloudShipmentToLocal(cloudMatch) || s;
+      }
     }catch(error){
       console.error('cloud tracking load failed', error);
       showToast('Live tracking is temporarily unavailable. Showing cached data.', 'error', 3500);
     }
   }
   const el = document.getElementById('track-container');
-  showToast('Searching '+trackingNumber+'...', 'info', 1400);
+  showToast('Searching '+identifier+'...', 'info', 1400);
   if(!s){
     el.innerHTML = `
       <button class="back-link" onclick="backHome()">← Back</button>
       <div class="not-found">
         <h2>No shipment found</h2>
-        <p>We couldn't find a shipment matching "${escapeHtml(trackingNumber)}". Double check the tracking number and try again.</p>
+        <p>We couldn't find a shipment matching "${escapeHtml(identifier)}". Double check the tracking number or phone number and try again.</p>
       </div>`;
-    showToast('No shipment found: '+trackingNumber, 'error', 3000);
+    showToast('No shipment found: '+identifier, 'error', 3000);
     return;
   }
+  currentTrackingNumber = s.trackingNumber;
   showToast('Shipment found — opening map', 'success', 1000);
   const displayStatusSteps = [
     {key:'Order Placed', label:'Order Received', date:getShipmentDate(s,'Order Placed')},
@@ -537,7 +615,7 @@ async function renderTrackView(trackingNumber){
             <div class="track-box-label">Email</div>
             <div class="track-box-value">${escapeHtml(s.receiver.email || 'mail@padgone.com')}</div>
             <div class="track-box-label">Phone Number</div>
-            <div class="track-box-value">+ 369-1212</div>
+            <div class="track-box-value">${escapeHtml(s.receiver.phone || s.receiver.phoneNumber || s.receiver.phone_number || '+1 (000) 000-0000')}</div>
           </div>
         </div>
 
@@ -1095,7 +1173,10 @@ function openNewShipmentModal(){
         <div class="field"><label>Receiver name</label><input id="ns-receiver" placeholder="Recipient name"/></div>
         <div class="field"><label>Destination city</label><select id="ns-dest">${cityOptions}</select></div>
       </div>
-      <div class="field"><label>Receiver email (optional)</label><input id="ns-email" type="email" placeholder="name@example.com"/></div>
+      <div class="field-row">
+        <div class="field"><label>Receiver email (optional)</label><input id="ns-email" type="email" placeholder="name@example.com"/></div>
+        <div class="field"><label>Receiver phone</label><input id="ns-phone" type="tel" placeholder="+1 (555) 123-4567"/></div>
+      </div>
       <div class="field cargo-manifest-field">
         <label>Items being tracked</label>
         <div class="cargo-items-editor" id="ns-items-body"></div>
@@ -1135,16 +1216,18 @@ function createShipment(){
   const origin = document.getElementById('ns-origin').value;
   const dest = document.getElementById('ns-dest').value;
   const email = document.getElementById('ns-email').value.trim();
+  const phone = document.getElementById('ns-phone').value.trim();
   const items = collectShipmentItems('ns-items-body');
   if(items === null) return;
   if(origin===dest){ showToast('Origin and destination must differ.','error'); return; }
   if(email && !/^\S+@\S+\.\S+$/ .test(email)){ showToast("Enter a valid receiver email.", "error"); return; }
+  if(!phone){ showToast('Enter a receiver phone number for tracking lookup.', 'error'); return; }
   const tn = genTracking();
   const s = {
     trackingNumber:tn, status:'Order Placed',
     packageName,
     sender:{name:sender, city:origin},
-    receiver:{name:receiver, city:dest, email},
+    receiver:{name:receiver, city:dest, email, phone},
     origin:{city:origin, ...CITIES[origin]},
     destination:{city:dest, ...CITIES[dest]},
     currentPos:{...CITIES[origin]},
@@ -1253,12 +1336,20 @@ function renderAdminMap(main){
       <span><span class="legend-dot" style="background:#98A2B3;"></span> Off duty</span>
     </div>
   `;
+  if(!window.L){
+    loadLeaflet(() => initAdminMap());
+    return;
+  }
   initAdminMap();
 }
 
 function initAdminMap(){
   const container = document.getElementById('admin-map');
   if(!container) return;
+  if(!window.L){
+    loadLeaflet(() => initAdminMap());
+    return;
+  }
   if(adminMapInstance){ adminMapInstance.remove(); adminMapInstance=null; }
   adminMapInstance = L.map(container,{attributionControl:false}).setView([39.5,-98.35],4);
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(adminMapInstance);
@@ -1460,6 +1551,7 @@ function notifyTrackViewUpdate(trackingNumber){
   await loadData();
   await window.SwiftBackend?.init();
   subscribeToCloudShipments();
+  document.body.classList.add('page-ready');
   const trackParam = normalizeTrackingNumber(new URLSearchParams(window.location.search).get('track'));
   if(trackParam){
     currentTrackingNumber = trackParam;
@@ -1467,6 +1559,29 @@ function notifyTrackViewUpdate(trackingNumber){
     renderTrackView(trackParam);
   }
 })();
+
+const chatForm = document.querySelector('.chat-form');
+if(chatForm){
+  chatForm.addEventListener('submit', (event)=>{
+    event.preventDefault();
+    const input = chatForm.querySelector('input');
+    const val = input.value.trim();
+    if(!val) return;
+    const bubble = document.createElement('div');
+    bubble.className = 'chat-bubble outbound';
+    bubble.textContent = val;
+    chatForm.closest('.chat-panel').querySelector('.chat-body').appendChild(bubble);
+    input.value = '';
+    setTimeout(()=>{
+      const body = chatForm.closest('.chat-panel').querySelector('.chat-body');
+      const system = document.createElement('div');
+      system.className = 'chat-bubble system';
+      system.textContent = 'Thank you. Our logistics team will review your message and respond shortly.';
+      body.appendChild(system);
+      body.scrollTop = body.scrollHeight;
+    }, 500);
+  });
+}
 // removed stray closing sequence
 
 // If this script is loaded on the standalone admin page, render admin immediately
@@ -1482,6 +1597,25 @@ document.addEventListener('click', (e)=>{
     if(!wrap) return;
     const isOpen = wrap.classList.toggle('menu-open');
     navToggle.setAttribute('aria-expanded', String(isOpen));
+    return;
+  }
+
+  const chatToggle = e.target.closest('.chat-toggle');
+  if(chatToggle){
+    const panel = document.getElementById('chat-panel');
+    if(!panel) return;
+    const isOpen = panel.hidden;
+    panel.hidden = !isOpen;
+    chatToggle.setAttribute('aria-expanded', String(isOpen));
+    return;
+  }
+
+  const chatClose = e.target.closest('.chat-close');
+  if(chatClose){
+    const panel = document.getElementById('chat-panel');
+    if(panel){ panel.hidden = true; }
+    const trigger = document.querySelector('.chat-toggle');
+    if(trigger){ trigger.setAttribute('aria-expanded', 'false'); }
     return;
   }
 

@@ -8,28 +8,27 @@
 <meta http-equiv="Expires" content="0">
 <title>swiftcargosolutions — Track &amp; Manage Shipments</title>
 <link rel="preconnect" href="https://fonts.googleapis.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="./css/style.css?v=track-ui-2026-08-28">
 </head>
 <body>
 <div class="app" id="app">
 
   <header class="topbar">
-    <div class="brand">
-      <div class="brand-mark">
-        <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7h11v10H3z"/><path d="M14 10h4l3 3v4h-7z"/><circle cx="7.5" cy="19" r="1.5"/><circle cx="18" cy="19" r="1.5"/></svg>
-      </div>
-      <div>
-        <div class="brand-name">swiftcargosolutions</div>
-        <div class="brand-tag">Logistics Network</div>
-      </div>
+    <div class="brand" aria-label="Swift Cargo Solutions logo">
+      <img class="brand-logo" src="./assets/swift-logo.svg" alt="Swift Cargo Solutions" />
     </div>
+
     <div class="topnav-wrap">
       <button class="nav-toggle" type="button" aria-label="Toggle navigation" aria-expanded="false">
         <span></span><span></span><span></span>
       </button>
       <nav class="topnav" aria-label="Main navigation">
-        <button data-nav="home" class="active">Track a package</button>
+        <button data-nav="home" class="active">Home</button>
+        <button data-nav="tracking">Tracking</button>
+        <button data-nav="services">Services</button>
+        <button data-nav="policies">Policies</button>
+        <button data-nav="contact">Contact</button>
       </nav>
     </div>
   </header>
@@ -38,18 +37,193 @@
   <main id="view-home">
     <section class="hero">
       <div class="hero-inner">
-        <div class="hero-eyebrow"><span class="dot"></span> Live network status: operational</div>
-        <h1>Know exactly where it is.</h1>
-        <p class="lead">Enter a tracking number to see live location, delivery progress, and estimated arrival — updated in real time.</p>
-        <div class="track-box">
-          <input id="home-track-input" type="text" placeholder="Enter tracking number, e.g. SC100234567" class="mono" />
-          <button id="home-track-btn">Track</button>
+        <div class="hero-copy">
+          <div class="hero-eyebrow"><span class="dot"></span> Live network status: operational</div>
+          <h1>Moving your world, one shipment at a time.</h1>
+          <p class="lead">At Swift Cargo Solutions, we move more than cargo — we move trust, reliability, and peace of mind across borders with fast, secure, and transparent delivery service.</p>
+          <div class="hero-actions">
+            <a href="#track-form-anchor" class="primary-action">Track Shipment</a>
+            <a href="#contact" class="secondary-action">Contact Us</a>
+          </div>
         </div>
-        
+
+        <div class="hero-panel glass-panel" id="track-form-anchor">
+          <div class="panel-topline">
+            <span class="mini-pill">Fast & Reliable</span>
+            <span class="mini-status">24/7 Tracking</span>
+          </div>
+          <h2>Track your shipment</h2>
+          <div class="track-box">
+            <input id="home-track-input" type="text" placeholder="Tracking number or phone number" class="mono" aria-label="Track shipment by tracking number or phone number" />
+            <button id="home-track-btn">Track</button>
+          </div>
+          <div class="hero-stats">
+            <div>
+              <strong>120K+</strong>
+              <span>Shipments</span>
+            </div>
+            <div>
+              <strong>98.7%</strong>
+              <span>On-time</span>
+            </div>
+            <div>
+              <strong>24/7</strong>
+              <span>Support</span>
+            </div>
+          </div>
+        </div>
       </div>
     </section>
 
-    
+    <section class="feature-band" id="services">
+      <div class="section-head">
+        <p>Our expertise</p>
+        <h3>Global logistics built around your business</h3>
+      </div>
+      <div class="feature-grid">
+        <div class="feature-card glass-panel">
+          <div class="feature-icon">✈️</div>
+          <h3>Air Freight</h3>
+          <p>Fast international cargo movement for urgent shipments and time-sensitive deliveries with flexible routing and priority handling.</p>
+        </div>
+        <div class="feature-card glass-panel">
+          <div class="feature-icon">🚢</div>
+          <h3>Sea Freight</h3>
+          <p>Cost-effective container solutions for bulk and international cargo, designed for long-haul efficiency and reliable transit schedules.</p>
+        </div>
+        <div class="feature-card glass-panel">
+          <div class="feature-icon">🚚</div>
+          <h3>Land Transport</h3>
+          <p>Regional and cross-border cargo delivery through well-managed road networks, ensuring dependable last-mile and mid-mile coverage.</p>
+        </div>
+        <div class="feature-card glass-panel">
+          <div class="feature-icon">📦</div>
+          <h3>Warehousing & Distribution</h3>
+          <p>Secure storage, inventory oversight, and outbound distribution services that support smooth flow from stockroom to destination.</p>
+        </div>
+        <div class="feature-card glass-panel">
+          <div class="feature-icon">🛃</div>
+          <h3>Customs & Compliance</h3>
+          <p>Documentation, border coordination, and customs support aimed at reducing delays and keeping shipments moving legally and efficiently.</p>
+        </div>
+        <div class="feature-card glass-panel">
+          <div class="feature-icon">🤝</div>
+          <h3>Project Cargo</h3>
+          <p>Specialized handling for large, oversized, or mission-critical freight that requires advanced planning, tracking, and delivery coordination.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="trust-strip">
+      <div class="trust-strip-inner glass-panel">
+        <div class="mini-kpi">
+          <strong>850+</strong>
+          <span>Business clients</span>
+        </div>
+        <div class="mini-kpi">
+          <strong>45+</strong>
+          <span>Global hubs</span>
+        </div>
+        <div class="mini-kpi">
+          <strong>12 hrs</strong>
+          <span>Avg. response</span>
+        </div>
+        <div class="mini-kpi">
+          <strong>99.1%</strong>
+          <span>Shipment visibility</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="network-section">
+      <div class="section-head">
+        <p>Why Swift</p>
+        <h3>Built for growing businesses that need dependable shipping clarity</h3>
+      </div>
+      <div class="reason-grid">
+        <article class="reason-card glass-panel">
+          <div class="reason-badge">01</div>
+          <h4>Dedicated freight coordination</h4>
+          <p>From first-mile pickups to final delivery, our operations team keeps every move aligned with real-time priorities and shipment milestones.</p>
+        </article>
+        <article class="reason-card glass-panel">
+          <div class="reason-badge">02</div>
+          <h4>Transparent shipment tracking</h4>
+          <p>Customers can track movements by number or phone number, with live status updates designed for trust and operational awareness.</p>
+        </article>
+        <article class="reason-card glass-panel">
+          <div class="reason-badge">03</div>
+          <h4>Multi-modal logistics network</h4>
+          <p>Air, sea, ground, and warehousing support give your cargo a flexible route that adapts to speed, cost, and destination needs.</p>
+        </article>
+      </div>
+    </section>
+
+    <section class="policies-section" id="policies">
+      <div class="section-head center">
+        <p>Company policies</p>
+        <h3>Clear service standards for a trusted shipping experience</h3>
+      </div>
+      <div class="policy-grid">
+        <article class="policy-card glass-panel">
+          <span class="policy-tag">Shipping Policy</span>
+          <h4>Shipping & delivery standards</h4>
+          <p>All shipments are processed on a first-in, first-out basis with routing based on destination, service level, and customs requirements. Transit timelines are estimated and may vary with weather, border processing, and carrier conditions.</p>
+        </article>
+        <article class="policy-card glass-panel">
+          <span class="policy-tag">Privacy Policy</span>
+          <h4>Data protection & confidentiality</h4>
+          <p>We collect only the information needed to process freight, provide tracking updates, and support communication. Customer data is protected, never sold, and used strictly for fulfillment, support, and operational improvement.</p>
+        </article>
+        <article class="policy-card glass-panel">
+          <span class="policy-tag">Terms of Service</span>
+          <h4>Operational commitments</h4>
+          <p>By using Swift Cargo Solutions, clients agree to provide accurate shipment details, pay all charges on time, and ensure goods are properly packaged and documented for transit. We reserve the right to refuse hazardous or prohibited items.</p>
+        </article>
+        <article class="policy-card glass-panel">
+          <span class="policy-tag">Refund Policy</span>
+          <h4>Returns, claims & refunds</h4>
+          <p>Refunds or adjustments are reviewed on a case-by-case basis for service failures, incorrect billing, or cancelled shipments within stated terms. Claims must be filed promptly with supporting documents and shipment details.</p>
+        </article>
+      </div>
+    </section>
+
+    <section class="quote-section" id="contact">
+      <div class="quote-card glass-panel">
+        <div class="contact-grid">
+          <div class="contact-copy">
+            <p class="eyebrow-text">Contact us</p>
+            <h3>Need a logistics partner you can trust?</h3>
+            <div class="contact-list">
+              <div><strong>Email</strong><span>admin@swiftcargosolutions.com</span></div>
+              <div><strong>Office</strong><span>105 Harbor Avenue, Logistics Hub, New York, NY</span></div>
+            </div>
+          </div>
+          <form class="quote-form">
+            <div class="field-grid">
+              <label><span>Name</span><input type="text" placeholder="Your full name" /></label>
+              <label><span>Email</span><input type="email" placeholder="you@example.com" /></label>
+              <label><span>Phone</span><input type="tel" placeholder="(000) 000-0000" /></label>
+              <label><span>Freight Type</span><select><option>Freight Type</option><option>Air Freight</option><option>Sea Freight</option><option>Ground Cargo</option></select></label>
+              <label><span>Departure City</span><input type="text" placeholder="City departure" /></label>
+              <label><span>Delivery City</span><input type="text" placeholder="Delivery city" /></label>
+              <label><span>Incoterms</span><select><option>Incoterms</option><option>FOB</option><option>CIF</option><option>DDP</option></select></label>
+              <label><span>Weight</span><input type="text" placeholder="kg" /></label>
+              <label><span>Height</span><input type="text" placeholder="cm" /></label>
+              <label><span>Width</span><input type="text" placeholder="cm" /></label>
+              <label><span>Length</span><input type="text" placeholder="cm" /></label>
+            </div>
+            <div class="checkbox-row">
+              <label><input type="checkbox" /> Fragile</label>
+              <label><input type="checkbox" /> Express Delivery</label>
+              <label><input type="checkbox" /> Insurance</label>
+              <label><input type="checkbox" /> Packaging</label>
+            </div>
+            <button type="submit" class="primary-action quote-submit">Request A Quote</button>
+          </form>
+        </div>
+      </div>
+    </section>
   </main>
 
   <!-- ================= TRACK RESULT ================= -->
@@ -61,6 +235,60 @@
 
 </div>
 
-<script defer src="./js/supabase-config.js?v=track-ui-2026-08-28"></script><script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script defer src="./js/backend.js?v=track-ui-2026-08-28"></script><script defer src="./js/client-api.js?v=track-ui-2026-08-28"></script><script defer src="./js/app.js?v=track-ui-2026-08-28"></script><script defer>window.testSupabase=()=>window.SwiftBackend.testShipments();</script>
+<div class="chat-widget" aria-live="polite">
+  <button class="chat-toggle" type="button" aria-expanded="false" aria-controls="chat-panel">
+    <span class="chat-toggle-icon">💬</span>
+    <span>Chat</span>
+  </button>
+  <div id="chat-panel" class="chat-panel" hidden>
+    <div class="chat-header">
+      <div>
+        <strong>Swift Support</strong>
+        <small>We typically reply in a few minutes</small>
+      </div>
+      <button type="button" class="chat-close" aria-label="Close chat">×</button>
+    </div>
+    <div class="chat-body">
+      <div class="chat-bubble inbound">Hello! Need shipment support, rates, or tracking help?</div>
+      <div class="chat-bubble system">Our support team is here to assist with shipping, tracking, and logistics updates.</div>
+    </div>
+    <form class="chat-form">
+      <input type="text" placeholder="Type your message..." aria-label="Type your message" />
+      <button type="submit">Send</button>
+    </form>
+  </div>
+</div>
+
+<footer class="site-footer">
+  <div class="site-footer-inner">
+    <div>
+      <div class="brand footer-brand">
+        <img class="brand-logo brand-logo-footer" src="./assets/swift-logo.svg" alt="Swift Cargo Solutions" />
+      </div>
+      <p>Delivering trusted, reliable, and efficient shipping solutions across the globe with responsive service and complete shipment visibility.</p>
+    </div>
+    <div>
+      <h4>Quick links</h4>
+      <ul>
+        <li><a href="#services">Services</a></li>
+        <li><a href="#policies">Policies</a></li>
+        <li><a href="#contact">Contact</a></li>
+        <li><a href="#track-form-anchor">Track shipment</a></li>
+      </ul>
+    </div>
+    <div>
+      <h4>Policies</h4>
+      <ul>
+        <li><a href="#policies">Shipping Policy</a></li>
+        <li><a href="#policies">Privacy Policy</a></li>
+        <li><a href="#policies">Terms of Service</a></li>
+        <li><a href="#policies">Refund Policy</a></li>
+      </ul>
+    </div>
+  </div>
+  <div class="footer-bottom">© 2026 Swift Cargo Solutions. All rights reserved.</div>
+</footer>
+
+<script defer src="./js/supabase-config.js?v=track-ui-2026-08-28"></script><script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script defer src="./js/backend.js?v=track-ui-2026-08-28"></script><script defer src="./js/client-api.js?v=track-ui-2026-08-28"></script><script defer src="./js/tracking-utils.js?v=track-ui-2026-08-28"></script><script defer src="./js/app.js?v=track-ui-2026-08-28"></script><script defer>window.testSupabase=()=>window.SwiftBackend.testShipments();</script>
 </body>
 </html>

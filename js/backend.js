@@ -43,6 +43,7 @@ async upsertShipment(shipment){
     sender_address:shipment.sender?.address||"",
     receiver_name:shipment.receiver?.name||"Recipient",
     receiver_email:shipment.receiver?.email||"",
+    receiver_phone:shipment.receiver?.phone||"",
     receiver_address:shipment.receiver?.address||"",
     origin_city:shipment.origin?.city||"",
     origin_lat:shipment.origin?.lat,

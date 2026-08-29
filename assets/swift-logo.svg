@@ -1,0 +1,42 @@
+<svg width="1650" height="420" viewBox="0 0 1650 420" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="brandBlue" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#2A96FF"/>
+      <stop offset="42%" stop-color="#176FE0"/>
+      <stop offset="100%" stop-color="#0D2F5E"/>
+    </linearGradient>
+    <linearGradient id="brandOrange" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#FFD978"/>
+      <stop offset="100%" stop-color="#F08A1E"/>
+    </linearGradient>
+    <linearGradient id="brandText" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#DFF3FF"/>
+      <stop offset="24%" stop-color="#B7DFFF"/>
+      <stop offset="52%" stop-color="#72B8FF"/>
+      <stop offset="100%" stop-color="#F5FAFF"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="160%">
+      <feDropShadow dx="0" dy="16" stdDeviation="12" flood-color="#061A2F" flood-opacity="0.28"/>
+    </filter>
+  </defs>
+
+  <g filter="url(#shadow)">
+    <path d="M105 270C137 197 216 146 305 150C370 152 439 182 492 250C534 303 551 333 538 356C522 385 474 373 430 344C376 310 334 286 290 290C249 294 220 326 218 371C217 411 247 432 272 432H103C60 432 30 391 47 358C61 330 82 303 105 270Z" fill="url(#brandBlue)"/>
+    <path d="M182 205C131 222 92 230 58 237C31 243 13 269 22 295C34 330 77 330 124 315C189 293 249 257 305 150L182 205Z" fill="url(#brandOrange)"/>
+  </g>
+
+  <g filter="url(#shadow)">
+    <rect x="278" y="230" width="78" height="78" rx="16" fill="url(#brandOrange)"/>
+    <path d="M301 253H336C346 253 354 261 354 271V307C354 317 346 325 336 325H301C291 325 283 317 283 307V271C283 261 291 253 301 253Z" fill="#F9FBFF" fill-opacity="0.18"/>
+    <path d="M309 261V316" stroke="#FFF9EF" stroke-width="6" stroke-linecap="round" opacity="0.9"/>
+    <path d="M289 288H348" stroke="#FFF9EF" stroke-width="6" stroke-linecap="round" opacity="0.9"/>
+    <rect x="292" y="203" width="84" height="30" rx="12" fill="#0E264D" fill-opacity="0.2"/>
+  </g>
+
+  <g filter="url(#shadow)">
+    <text x="450" y="210" font-family="Arial, Helvetica, sans-serif" font-size="142" font-weight="900" letter-spacing="-6" fill="url(#brandText)">SWIFT</text>
+    <text x="454" y="295" font-family="Arial, Helvetica, sans-serif" font-size="58" font-weight="800" letter-spacing="7" fill="#EAF5FF">CARGO SOLUTIONS</text>
+    <path d="M454 322H1185" stroke="#9EC8FF" stroke-width="3.5" stroke-linecap="round" opacity="0.9"/>
+    <text x="454" y="365" font-family="Arial, Helvetica, sans-serif" font-size="28" font-weight="700" letter-spacing="9" fill="#D7EAFE">LOGISTICS NETWORK</text>
+  </g>
+</svg>
