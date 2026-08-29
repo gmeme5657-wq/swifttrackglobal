@@ -1152,37 +1152,81 @@ function openNewShipmentModal(){
   const overlay = document.createElement('div');
   overlay.className='modal-overlay';
   overlay.innerHTML = `
-    <div class="modal">
-      <h3>New shipment</h3>
-      <div class="field"><label>Template (optional)</label><select id="ns-template"><option value="">Custom / none</option>${templateOptions}</select></div>
-      <div class="field-row">
-        <div class="field"><label>Package name</label><input id="ns-package" placeholder="e.g. Customer order"/></div>
-        <div class="field"><label>Sender name</label><input id="ns-sender" placeholder="Warehouse / company"/></div>
-        <div class="field"><label>Origin city</label><select id="ns-origin">${cityOptions}</select></div>
+    <div class="modal modal-wide">
+      <div class="modal-header-section">
+        <h3>Create New Shipment</h3>
+        <p class="modal-desc">Fill in all shipment details below</p>
       </div>
-      <div class="field-row">
-        <div class="field"><label>Receiver name</label><input id="ns-receiver" placeholder="Recipient name"/></div>
-        <div class="field"><label>Destination city</label><select id="ns-dest">${cityOptions}</select></div>
+      
+      <!-- SENDER INFORMATION -->
+      <div class="form-section">
+        <h4 class="form-section-title">Sender Information</h4>
+        <div class="field-grid">
+          <label><span>Sender Name</span><input id="ns-sender-name" type="text" placeholder="Company or warehouse name"/></label>
+          <label><span>Sender Phone</span><input id="ns-sender-phone" type="tel" placeholder="+1 (555) 000-0000"/></label>
+          <label><span>Sender Email</span><input id="ns-sender-email" type="email" placeholder="sender@company.com"/></label>
+          <label><span>Sender Address</span><input id="ns-sender-address" type="text" placeholder="Street address, city, state"/></label>
+        </div>
       </div>
-      <div class="field-row">
-        <div class="field"><label>Receiver email (optional)</label><input id="ns-email" type="email" placeholder="name@example.com"/></div>
-        <div class="field"><label>Receiver phone</label><input id="ns-phone" type="tel" placeholder="+1 (555) 123-4567"/></div>
+
+      <!-- RECEIVER INFORMATION -->
+      <div class="form-section">
+        <h4 class="form-section-title">Receiver Information</h4>
+        <div class="field-grid">
+          <label><span>Receiver Name</span><input id="ns-receiver-name" type="text" placeholder="Recipient name"/></label>
+          <label><span>Receiver Phone</span><input id="ns-receiver-phone" type="tel" placeholder="+1 (555) 000-0000"/></label>
+          <label><span>Receiver Email</span><input id="ns-receiver-email" type="email" placeholder="recipient@example.com"/></label>
+          <label><span>Receiver Address</span><input id="ns-receiver-address" type="text" placeholder="Delivery street address, city, state"/></label>
+        </div>
       </div>
-      <div class="field cargo-manifest-field">
-        <label>Items being tracked</label>
-        <div class="cargo-items-editor" id="ns-items-body"></div>
-        <button class="btn-secondary cargo-add-btn" type="button" onclick="addShipmentItemRow('ns-items-body')">+ Add item</button>
+
+      <!-- SHIPMENT DETAILS -->
+      <div class="form-section">
+        <h4 class="form-section-title">Shipment Details</h4>
+        <div class="field-grid">
+          <label><span>Shipment Name</span><input id="ns-shipment-name" type="text" placeholder="e.g. Electronics Order #12345"/></label>
+          <label><span>Tracking Number</span><input id="ns-tracking-number" type="text" placeholder="Auto-generated if left blank" readonly/></label>
+          <label><span>Quantity</span><input id="ns-quantity" type="number" placeholder="1" min="1" value="1"/></label>
+          <label><span>Weight (kg)</span><input id="ns-weight" type="number" placeholder="0.00" step="0.01" min="0"/></label>
+          <label><span>Shipping Mode</span><select id="ns-shipping-mode"><option value="">Select shipping mode</option><option value="Air Freight">Air Freight</option><option value="Sea Freight">Sea Freight</option><option value="Land Transport">Land Transport</option></select></label>
+          <label><span>Length (cm)</span><input id="ns-length" type="number" placeholder="0.00" step="0.01" min="0"/></label>
+          <label><span>Width (cm)</span><input id="ns-width" type="number" placeholder="0.00" step="0.01" min="0"/></label>
+          <label><span>Height (cm)</span><input id="ns-height" type="number" placeholder="0.00" step="0.01" min="0"/></label>
+          <label><span>Status</span><select id="ns-status"><option value="Order Placed">Order Placed</option><option value="Processing">Processing</option><option value="Ready for Pickup">Ready for Pickup</option></select></label>
+          <label><span>Current Location</span><select id="ns-current-location">${cityOptions}</select></label>
+          <label><span>Shipment Cost ($)</span><input id="ns-shipment-cost" type="number" placeholder="0.00" step="0.01" min="0"/></label>
+          <label><span>Insurance Cost ($)</span><input id="ns-insurance-cost" type="number" placeholder="0.00" step="0.01" min="0"/></label>
+        </div>
       </div>
+
+      <!-- SCHEDULE & DELIVERY -->
+      <div class="form-section">
+        <h4 class="form-section-title">Schedule & Delivery</h4>
+        <div class="field-grid">
+          <label><span>Origin City</span><select id="ns-origin-city">${cityOptions}</select></label>
+          <label><span>Origin Date</span><input id="ns-origin-date" type="date"/></label>
+          <label><span>Destination City</span><select id="ns-destination-city">${cityOptions}</select></label>
+          <label><span>Destination Country</span><input id="ns-destination-country" type="text" placeholder="Country name"/></label>
+          <label><span>Delivery Address</span><input id="ns-delivery-address" type="text" placeholder="Full delivery address"/></label>
+          <label><span>Pickup Date</span><input id="ns-pickup-date" type="date"/></label>
+          <label><span>Pickup Time</span><input id="ns-pickup-time" type="time"/></label>
+          <label><span>Departure Date</span><input id="ns-departure-date" type="date"/></label>
+          <label><span>Departure Time</span><input id="ns-departure-time" type="time"/></label>
+          <label><span>Expected Delivery Date</span><input id="ns-expected-delivery-date" type="date"/></label>
+          <label><span>Expected Delivery Time</span><input id="ns-expected-delivery-time" type="time"/></label>
+          <label colspan="2"><span>Additional Comments</span><textarea id="ns-additional-comments" placeholder="Any special handling instructions or additional notes..." rows="3"></textarea></label>
+        </div>
+      </div>
+
       <div class="modal-actions">
         <button class="btn-secondary" onclick="closeModal()">Cancel</button>
-        <button class="btn-primary" onclick="createShipment()">Create shipment</button>
+        <button class="btn-primary" onclick="createShipment()">Create Shipment</button>
       </div>
     </div>`;
   document.body.appendChild(overlay);
-  document.getElementById('ns-dest').selectedIndex = 1;
-  addShipmentItemRow('ns-items-body');
-  const tplSel = document.getElementById('ns-template');
-  if(tplSel){ tplSel.addEventListener('change', ()=>{ populateNewShipmentFromTemplate(tplSel.value); }); }
+  document.getElementById('ns-destination-city').selectedIndex = 1;
+  document.getElementById('ns-origin-city').selectedIndex = 0;
+  document.getElementById('ns-current-location').selectedIndex = 0;
 }
 
 function populateNewShipmentFromTemplate(templateId){
@@ -1201,37 +1245,125 @@ function populateNewShipmentFromTemplate(templateId){
 function closeModal(){ const o=document.querySelector('.modal-overlay'); if(o) o.remove(); }
 
 function createShipment(){
-  const packageName = document.getElementById('ns-package').value.trim() || 'Shipment';
-  const sender = document.getElementById('ns-sender').value.trim() || 'Warehouse';
-  const receiver = document.getElementById('ns-receiver').value.trim() || 'Recipient';
-  const origin = document.getElementById('ns-origin').value;
-  const dest = document.getElementById('ns-dest').value;
-  const email = document.getElementById('ns-email').value.trim();
-  const phone = document.getElementById('ns-phone').value.trim();
-  const items = collectShipmentItems('ns-items-body');
-  if(items === null) return;
-  if(origin===dest){ showToast('Origin and destination must differ.','error'); return; }
-  if(email && !/^\S+@\S+\.\S+$/ .test(email)){ showToast("Enter a valid receiver email.", "error"); return; }
-  if(!phone){ showToast('Enter a receiver phone number for tracking lookup.', 'error'); return; }
+  // Sender Information
+  const senderName = document.getElementById('ns-sender-name').value.trim() || 'Warehouse';
+  const senderPhone = document.getElementById('ns-sender-phone').value.trim();
+  const senderEmail = document.getElementById('ns-sender-email').value.trim();
+  const senderAddress = document.getElementById('ns-sender-address').value.trim();
+
+  // Receiver Information
+  const receiverName = document.getElementById('ns-receiver-name').value.trim() || 'Recipient';
+  const receiverPhone = document.getElementById('ns-receiver-phone').value.trim();
+  const receiverEmail = document.getElementById('ns-receiver-email').value.trim();
+  const receiverAddress = document.getElementById('ns-receiver-address').value.trim();
+
+  // Shipment Details
+  const shipmentName = document.getElementById('ns-shipment-name').value.trim() || 'Shipment';
+  const quantity = parseInt(document.getElementById('ns-quantity').value) || 1;
+  const weight = parseFloat(document.getElementById('ns-weight').value) || 0;
+  const shippingMode = document.getElementById('ns-shipping-mode').value || 'Land Transport';
+  const length = parseFloat(document.getElementById('ns-length').value) || 0;
+  const width = parseFloat(document.getElementById('ns-width').value) || 0;
+  const height = parseFloat(document.getElementById('ns-height').value) || 0;
+  const status = document.getElementById('ns-status').value || 'Order Placed';
+  const shipmentCost = parseFloat(document.getElementById('ns-shipment-cost').value) || 0;
+  const insuranceCost = parseFloat(document.getElementById('ns-insurance-cost').value) || 0;
+
+  // Schedule & Delivery
+  const originCity = document.getElementById('ns-origin-city').value;
+  const originDate = document.getElementById('ns-origin-date').value;
+  const destinationCity = document.getElementById('ns-destination-city').value;
+  const destinationCountry = document.getElementById('ns-destination-country').value.trim();
+  const deliveryAddress = document.getElementById('ns-delivery-address').value.trim();
+  const pickupDate = document.getElementById('ns-pickup-date').value;
+  const pickupTime = document.getElementById('ns-pickup-time').value;
+  const departureDate = document.getElementById('ns-departure-date').value;
+  const departureTime = document.getElementById('ns-departure-time').value;
+  const expectedDeliveryDate = document.getElementById('ns-expected-delivery-date').value;
+  const expectedDeliveryTime = document.getElementById('ns-expected-delivery-time').value;
+  const additionalComments = document.getElementById('ns-additional-comments').value.trim();
+
+  // Validation
+  if(!receiverPhone){ showToast('Receiver phone is required for tracking lookup.', 'error'); return; }
+  if(!originCity || !destinationCity){ showToast('Select origin and destination cities.', 'error'); return; }
+  if(originCity === destinationCity){ showToast('Origin and destination must differ.', 'error'); return; }
+  if(receiverEmail && !/^\S+@\S+\.\S+$/.test(receiverEmail)){ showToast('Enter a valid receiver email.', 'error'); return; }
+
   const tn = genTracking();
   const s = {
-    trackingNumber:tn, status:'Order Placed',
-    packageName,
-    sender:{name:sender, city:origin},
-    receiver:{name:receiver, city:dest, email, phone},
-    origin:{city:origin, ...CITIES[origin]},
-    destination:{city:dest, ...CITIES[dest]},
-    currentPos:{...CITIES[origin]},
-    items,
-    driverId:null, createdAt:Date.now(),
-    statusHistory:[{status:'Order Placed', timestamp:Date.now(), location:origin}]
+    trackingNumber: tn,
+    status: status,
+    packageName: shipmentName,
+    sender: {
+      name: senderName,
+      phone: senderPhone,
+      email: senderEmail,
+      address: senderAddress,
+      city: originCity
+    },
+    receiver: {
+      name: receiverName,
+      phone: receiverPhone,
+      email: receiverEmail,
+      address: receiverAddress,
+      city: destinationCity
+    },
+    origin: {
+      city: originCity,
+      date: originDate,
+      ...CITIES[originCity]
+    },
+    destination: {
+      city: destinationCity,
+      country: destinationCountry,
+      address: deliveryAddress,
+      ...CITIES[destinationCity]
+    },
+    currentPos: {...CITIES[originCity]},
+    shipment: {
+      quantity: quantity,
+      weight: weight,
+      dimensions: {
+        length: length,
+        width: width,
+        height: height
+      },
+      mode: shippingMode,
+      cost: shipmentCost,
+      insuranceCost: insuranceCost
+    },
+    schedule: {
+      pickup: {
+        date: pickupDate,
+        time: pickupTime
+      },
+      departure: {
+        date: departureDate,
+        time: departureTime
+      },
+      expectedDelivery: {
+        date: expectedDeliveryDate,
+        time: expectedDeliveryTime
+      }
+    },
+    additionalComments: additionalComments,
+    items: [],
+    driverId: null,
+    createdAt: Date.now(),
+    statusHistory: [{
+      status: status,
+      timestamp: Date.now(),
+      location: originCity
+    }]
   };
+
   DATA.shipments.unshift(s);
-  sendNotification(s,'Order Placed');
+  sendNotification(s, status);
   closeModal();
   persist();
   renderAdminSub('shipments');
   notifyTrackViewUpdate(s.trackingNumber);
+  showToast('Shipment created successfully!', 'success');
 }
 
 function openShipmentItemsModal(trackingNumber){
