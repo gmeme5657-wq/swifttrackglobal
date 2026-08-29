@@ -1542,6 +1542,11 @@ function notifyTrackViewUpdate(trackingNumber){
   await loadData();
   await window.SwiftBackend?.init();
   subscribeToCloudShipments();
+  document.querySelectorAll('.feature-card, .reason-card, .policy-card, .quote-card, .track-order-card, .stat-card').forEach((node, index) => {
+    node.classList.add('reveal-up');
+    node.style.transitionDelay = (index * 60) + 'ms';
+    requestAnimationFrame(() => node.classList.add('visible'));
+  });
   document.body.classList.add('page-ready');
   const trackParam = normalizeTrackingNumber(new URLSearchParams(window.location.search).get('track'));
   if(trackParam){
