@@ -29,7 +29,10 @@ subscribeShipments(callback){
 async getShipmentByTracking(trackingNumber){
   const client=this.ensureClient();
   if(!client)return null;
-  const result=await client.from("public_tracking_shipments").select("*").eq("tracking_number",trackingNumber).maybeSingle();
+  let result=await client.from("public_tracking_shipments").select("*").eq("tracking_number",trackingNumber).maybeSingle();
+  if(result.error?.code==="PGRST205") {
+    result=await client.from("shipments").select("id,tracking_number,origin_city,destination_city,current_lat,current_lng,status,created_at,updated_at").eq("tracking_number",trackingNumber).maybeSingle();
+  }
   if(result.error)throw result.error;
   return result.data;
 },

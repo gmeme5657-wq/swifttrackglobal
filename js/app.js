@@ -399,6 +399,16 @@ async function persist(force){
 function cloudShipmentToLocal(row){
   if(!row) return null;
   const existing = DATA && DATA.shipments.find(s=>s.trackingNumber===row.tracking_number);
+  const originLat=Number(row.origin_lat);
+  const originLng=Number(row.origin_lng);
+  const destinationLat=Number(row.destination_lat);
+  const destinationLng=Number(row.destination_lng);
+  const currentLat=Number(row.current_lat);
+  const currentLng=Number(row.current_lng);
+  const originCity=row.origin_city||existing?.origin?.city||'';
+  const destinationCity=row.destination_city||existing?.destination?.city||'';
+  const originFallback=CITIES[originCity]||{};
+  const destinationFallback=CITIES[destinationCity]||{};
   const shipment = {
     ...(existing||{}),
     id:row.id,
@@ -406,9 +416,9 @@ function cloudShipmentToLocal(row){
     status:row.status||'Order Placed',
     sender:{...(existing?.sender||{}),name:row.sender_name||'Warehouse',address:row.sender_address||'',city:row.origin_city||''},
     receiver:{...(existing?.receiver||{}),name:row.receiver_name||'Recipient',email:row.receiver_email||'',phone:row.receiver_phone||'',address:row.receiver_address||''},
-    origin:{city:row.origin_city||'',lat:Number(row.origin_lat),lng:Number(row.origin_lng)},
-    destination:{city:row.destination_city||'',lat:Number(row.destination_lat),lng:Number(row.destination_lng)},
-    currentPos:{lat:Number(row.current_lat),lng:Number(row.current_lng)},
+    origin:{...(existing?.origin||{}),city:originCity,lat:Number.isFinite(originLat)?originLat:(existing?.origin?.lat??originFallback.lat),lng:Number.isFinite(originLng)?originLng:(existing?.origin?.lng??originFallback.lng)},
+    destination:{...(existing?.destination||{}),city:destinationCity,lat:Number.isFinite(destinationLat)?destinationLat:(existing?.destination?.lat??destinationFallback.lat),lng:Number.isFinite(destinationLng)?destinationLng:(existing?.destination?.lng??destinationFallback.lng)},
+    currentPos:{lat:Number.isFinite(currentLat)?currentLat:(existing?.currentPos?.lat??existing?.origin?.lat??originFallback.lat),lng:Number.isFinite(currentLng)?currentLng:(existing?.currentPos?.lng??existing?.origin?.lng??originFallback.lng)},
     driverId:row.driver_id||existing?.driverId||null,
     createdAt:row.created_at ? new Date(row.created_at).getTime() : (existing?.createdAt||Date.now()),
     statusHistory:existing?.statusHistory||[{status:row.status||'Order Placed',timestamp:Date.now(),location:row.origin_city||''}]
@@ -873,7 +883,10 @@ function renderTrackMapFallback(s, message){
 function initTrackMap(s){
   const container = document.getElementById('track-map');
   if(!container) return;
-  if(!s.currentPos || !Number.isFinite(s.currentPos.lat) || !Number.isFinite(s.currentPos.lng)){
+  const hasRouteCoordinates = s.origin && s.destination &&
+    Number.isFinite(s.origin.lat) && Number.isFinite(s.origin.lng) &&
+    Number.isFinite(s.destination.lat) && Number.isFinite(s.destination.lng);
+  if(!hasRouteCoordinates || !s.currentPos || !Number.isFinite(s.currentPos.lat) || !Number.isFinite(s.currentPos.lng)){
     renderTrackMapFallback(s, 'Waiting for live position');
     return;
   }

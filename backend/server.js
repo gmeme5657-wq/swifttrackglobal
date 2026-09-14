@@ -76,9 +76,21 @@ http.createServer(async(req,res)=>{
     const tracking=url.pathname.match(/^\/api\/tracking\/([^/]+)$/);
     if(req.method==="GET"&&tracking){
       const trackingNumber=decodeURIComponent(tracking[1]).trim().toUpperCase();
-      const rows=await db(`public_tracking_shipments?select=${publicShipmentFields}&tracking_number=eq.${encodeURIComponent(trackingNumber)}&limit=1`,anonKey);
+      let rows;
+      try{
+        rows=await db(`public_tracking_shipments?select=${publicShipmentFields}&tracking_number=eq.${encodeURIComponent(trackingNumber)}&limit=1`,anonKey);
+      }catch(error){
+        if(error.status!==404) throw error;
+        rows=await db(`shipments?select=${publicShipmentFields}&tracking_number=eq.${encodeURIComponent(trackingNumber)}&limit=1`,anonKey);
+      }
       if(!rows?.[0]){send(res,404,{error:"Shipment not found"});return;}
-      const events=await db(`public_tracking_events?select=status,location,created_at&shipment_id=eq.${rows[0].id}&order=created_at.desc`,anonKey);
+      let events;
+      try{
+        events=await db(`public_tracking_events?select=status,location,created_at&shipment_id=eq.${rows[0].id}&order=created_at.desc`,anonKey);
+      }catch(error){
+        if(error.status!==404) throw error;
+        events=await db(`shipment_events?select=status,location,created_at&shipment_id=eq.${rows[0].id}&order=created_at.desc`,anonKey);
+      }
       send(res,200,{shipment:rows[0],events});
       return;
     }
