@@ -224,6 +224,45 @@ function cryptoId(){return Math.random().toString(36).slice(2,10);}
 
 function midpoint(a,b,t){return {lat:lerp(a.lat,b.lat,t), lng:lerp(a.lng,b.lng,t)};}
 
+// Generate realistic waypoints between origin and destination with ETAs
+function generateWaypoints(origin, destination, baseTime, driverId) {
+  const waypoints = [];
+  const avgSpeed = 55; // mph
+  const distance = dist(origin, destination) * 69; // rough conversion to miles (1 degree ≈ 69 miles)
+  const travelTime = (distance / avgSpeed) * 1000 * 60 * 60; // in milliseconds
+  
+  // Generate 2-3 intermediate waypoints
+  const numWaypoints = distance > 800 ? 3 : distance > 400 ? 2 : 1;
+  
+  const waypointEvents = [
+    { type: 'Sorting Center', description: 'Package sorted at facility', time: 0.05 },
+    { type: 'In Transit - Hub 1', description: 'Package in transit to regional hub', time: 0.25 },
+    { type: 'In Transit - Hub 2', description: 'Package at regional distribution center', time: 0.50 },
+    { type: 'Out for Delivery', description: 'Package with delivery driver', time: 0.85 }
+  ];
+  
+  for(let i = 1; i <= Math.min(numWaypoints, waypointEvents.length - 1); i++) {
+    const t = i / (numWaypoints + 1);
+    const pos = midpoint(origin, destination, t);
+    const eta = baseTime + (travelTime * t);
+    const event = waypointEvents[Math.min(i, waypointEvents.length - 2)];
+    
+    waypoints.push({
+      id: cryptoId(),
+      sequence: i,
+      type: event.type,
+      description: event.description,
+      position: pos,
+      eta: eta,
+      actual: null,
+      status: 'pending',
+      delay: 0
+    });
+  }
+  
+  return waypoints;
+}
+
 function mkShipment(tracking,status,originCity,destCity,_unused,driverId,createdAt,email){
   const phoneList = [
     '+1 (415) 555-0148',
@@ -234,18 +273,25 @@ function mkShipment(tracking,status,originCity,destCity,_unused,driverId,created
     '+1 (404) 555-0166'
   ];
   const phone = phoneList[Math.abs((tracking.split('').reduce((sum,ch)=>sum + ch.charCodeAt(0), 0) + Math.floor((createdAt || Date.now()) / 1000)) % phoneList.length)];
+  const origin = CITIES[originCity];
+  const destination = CITIES[destCity];
+  const baseTime = (createdAt || Date.now()) + 1000*60*60*2; // Add 2 hours buffer
+  
   return {
     trackingNumber:tracking,
     packageName:"Shipment "+tracking,
     status:"Order Placed",
     sender:{name:"Warehouse — "+originCity, city:originCity},
     receiver:{name:"Recipient", city:destCity, email:email||"", phone:phone},
-    origin:{city:originCity, ...CITIES[originCity]},
-    destination:{city:destCity, ...CITIES[destCity]},
-    currentPos:{...CITIES[originCity]},
+    origin:{city:originCity, ...origin},
+    destination:{city:destCity, ...destination},
+    currentPos:{...origin},
     driverId: null,
     createdAt: createdAt||Date.now(),
-    statusHistory:[{status:"Order Placed",timestamp:createdAt||Date.now(),location:originCity}]
+    waypoints: generateWaypoints(origin, destination, baseTime, driverId),
+    statusHistory:[{status:"Order Placed",timestamp:createdAt||Date.now(),location:originCity}],
+    exceptions: [],
+    notifications: []
   };
 }
 
@@ -263,6 +309,34 @@ function advanceTo(shipment,targetStatus,now){
     const t = idx===2?0.4:0.8;
     shipment.currentPos = midpoint(shipment.origin, shipment.destination, t);
   }
+  
+  // Update waypoint statuses based on shipment progress
+  updateWaypointProgress(shipment, now);
+}
+
+function updateWaypointProgress(shipment, now) {
+  if(!shipment.waypoints) return;
+  
+  const statusToProgress = {
+    'Order Placed': 0,
+    'Picked Up': 0.1,
+    'In Transit': 0.5,
+    'Out for Delivery': 0.9,
+    'Delivered': 1.0
+  };
+  
+  const progress = statusToProgress[shipment.status] || 0;
+  const waypointThreshold = progress * 0.9; // 90% of current progress
+  
+  shipment.waypoints.forEach(wp => {
+    const wpProgress = wp.sequence / (shipment.waypoints.length + 1);
+    if(wpProgress <= waypointThreshold) {
+      wp.status = 'completed';
+      wp.actual = wp.actual || now - Math.random() * 1000 * 60 * 60;
+    } else if(wpProgress <= progress + 0.15) {
+      wp.status = 'in-progress';
+    }
+  });
 }
 
 /* ============================================================
@@ -312,9 +386,12 @@ async function persist(force){
   }
   try{
     writeLocalData(JSON.stringify(DATA));
-    if(window.SwiftBackend?.ready) {
-      Promise.all(DATA.shipments.map(shipment=>window.SwiftBackend.upsertShipment(shipment)))
-        .catch(error=>console.error('cloud shipment sync failed', error));
+    if(isAdminAuthed && window.SwiftBackend?.ready && window.SwiftBackend.client?.auth?.getSession) {
+      const {data:authData}=await window.SwiftBackend.client.auth.getSession();
+      if(authData?.session) {
+        Promise.all(DATA.shipments.map(shipment=>window.SwiftBackend.upsertShipment(shipment)))
+          .catch(error=>console.error('cloud shipment sync failed', error));
+      }
     }
   }catch(e){ console.error('local database save failed', e); }
 }
@@ -579,6 +656,35 @@ async function renderTrackView(trackingNumber){
             `;
           }).join('')}
         </div>
+
+        ${s.waypoints && s.waypoints.length ? `
+          <div class="track-waypoints">
+            <div class="track-box-title">Intermediate Waypoints</div>
+            <div class="waypoints-timeline">
+              ${s.waypoints.map((wp, idx) => {
+                const isCompleted = wp.status === 'completed';
+                const isInProgress = wp.status === 'in-progress';
+                const eta = wp.eta ? fmtTime(wp.eta) : 'TBD';
+                const actual = wp.actual ? fmtTime(wp.actual) : 'Pending';
+                const delay = wp.delay > 0 ? ` (+${Math.round(wp.delay/1000/60)} min)` : '';
+                return `
+                  <div class="waypoint-item ${wp.status}" aria-label="Waypoint ${idx + 1}: ${wp.type}">
+                    <div class="waypoint-marker ${isCompleted ? 'done' : isInProgress ? 'active' : ''}"></div>
+                    <div class="waypoint-content">
+                      <div class="waypoint-type">${escapeHtml(wp.type)}</div>
+                      <div class="waypoint-description">${escapeHtml(wp.description)}</div>
+                      <div class="waypoint-times">
+                        <span class="waypoint-eta">ETA: ${eta}</span>
+                        ${isCompleted ? `<span class="waypoint-actual">✓ ${actual}</span>` : ''}
+                        ${delay ? `<span class="waypoint-delay">${delay}</span>` : ''}
+                      </div>
+                    </div>
+                  </div>
+                `;
+              }).join('')}
+            </div>
+          </div>
+        ` : ''}
 
         <div class="track-info-row">
           <div class="track-info-box">

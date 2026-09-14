@@ -51,6 +51,12 @@ service-role key in the browser. GitHub Pages cannot run the optional
 
 `data/seed.json` documents the local schema, while `supabase-schema.sql` is the shared database schema and access policies.
 
+### Production security checklist
+
+The optional Node API now requires a verified Supabase access token for admin and operator writes. Configure `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `CORS_ORIGIN`, and either Supabase `app_metadata.role` values (`admin`, `dispatcher`, or `driver`) or a comma-separated `ADMIN_EMAILS` allowlist. Do not use the demo passcode in production.
+
+Before using real customer data, apply `supabase/migrations/20260914_harden_tracking.sql` in Supabase and confirm that the deployed database matches `supabase-schema.sql`. The migration exposes only public tracking views to anonymous customers and prevents direct anonymous reads of private shipment columns. A code change is not live until the GitHub Pages site and, if used, the Node API are redeployed.
+
 ## Try the demo
 
 On the home page, track one of the seeded shipments:

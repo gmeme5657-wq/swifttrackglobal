@@ -487,6 +487,25 @@
   .track-step.done .track-step-name,.track-step.current .track-step-name{color:#1e2b38;}
   .track-step.current .track-step-name{font-weight:700;}
 
+  /* Waypoints Timeline */
+  .track-waypoints{padding:0 28px 18px;border-bottom:1px solid #edf0f5;}
+  .waypoints-timeline{display:flex;flex-direction:column;gap:18px;margin-top:14px;position:relative;}
+  .waypoints-timeline::before{content:"";position:absolute;left:11px;top:0;bottom:0;width:2px;background:linear-gradient(180deg,#1b8a5a 0%,#1b8a5a 50%,#d5dde8 50%,#d5dde8 100%);}
+  .waypoint-item{display:flex;gap:16px;align-items:flex-start;position:relative;padding-left:8px;}
+  .waypoint-marker{width:24px;height:24px;border-radius:50%;flex-shrink:0;margin-top:2px;border:3px solid #d5dde8;background:#fff;position:relative;z-index:2;}
+  .waypoint-marker.done{background:#1b8a5a;border-color:#1b8a5a;box-shadow:0 0 0 4px rgba(27,138,90,.12);}
+  .waypoint-marker.active{background:#fff;border-color:#1D6FE0;box-shadow:0 0 0 4px rgba(29,111,224,.12);animation:pulse-marker 2s infinite;}
+  @keyframes pulse-marker{0%,100%{box-shadow:0 0 0 4px rgba(29,111,224,.12);}50%{box-shadow:0 0 0 8px rgba(29,111,224,.08);}}
+  .waypoint-content{flex:1;min-width:0;}
+  .waypoint-type{font-size:14px;font-weight:700;color:#111827;margin-bottom:4px;}
+  .waypoint-description{font-size:13px;color:#5f6979;margin-bottom:8px;}
+  .waypoint-times{display:flex;gap:16px;flex-wrap:wrap;font-size:12px;}
+  .waypoint-eta{color:#5f6979;}
+  .waypoint-actual{color:#1b8a5a;font-weight:700;}
+  .waypoint-delay{color:#C98A1D;font-weight:700;}
+  .waypoint-item.pending .waypoint-marker{background:#f5f7fb;}
+  .waypoint-item.completed .waypoint-marker{background:#1b8a5a;border-color:#1b8a5a;}
+
   .track-info-row{display:grid;grid-template-columns:repeat(3,minmax(180px,1fr));gap:18px;padding:24px 24px 10px;}
   .track-info-box{padding:14px 16px;border-bottom:1px solid #edf0f5;}
   .track-box-title{font-size:13px;font-weight:700;color:#111827;margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid #edf0f5;}
@@ -556,6 +575,11 @@
     .track-steps{grid-template-columns:repeat(2,minmax(0,1fr));padding:0 18px 18px;gap:14px 10px;}
     .track-step::before{left:8%;right:8%;}
     .track-step-name{font-size:12px;min-height:30px;}
+    .waypoints-timeline{gap:14px;}
+    .waypoint-content{padding-right:8px;}
+    .waypoint-type{font-size:13px;}
+    .waypoint-description{font-size:12px;}
+    .waypoint-times{gap:12px;}
     .track-info-row{padding:20px 18px 8px;gap:12px;}
     .track-info-box{padding:12px 10px;}
     .track-item-wrap{padding:8px 18px 0;}
@@ -817,6 +841,49 @@ body{background-color:#edf3f9;background-image:linear-gradient(rgba(15,31,46,.35
   .feature-grid{grid-template-columns:1fr;}
   .field-grid label span{letter-spacing:.06em;}
   .quote-form .field-grid{grid-template-columns:1fr;}
+  
+  /* Mobile tracking optimization */
+  .track-shell{padding:0 0 18px;}
+  #track-map{height:240px !important;}
+  .track-order-card{border-radius:12px;margin:0 -12px;border:none;border-top:1px solid #edf0f5;border-bottom:1px solid #edf0f5;}
+  .track-order-header{padding:18px 16px 10px;}
+  .track-status-banner{padding:8px 16px 12px;flex-direction:column;align-items:flex-start;}
+  .track-status-badge{margin-bottom:8px;}
+  .track-status-copy{width:100%;gap:8px;font-size:12px;}
+  .track-status-copy span{width:100%;}
+  .track-steps{grid-template-columns:1fr;padding:12px 12px 12px;gap:8px;border-bottom:1px solid #edf0f5;}
+  .track-step::before{display:none;}
+  .track-step{padding:10px;background:#f8fafc;border-radius:8px;text-align:left;}
+  .track-step .track-step-badge{width:28px;height:28px;margin:0 0 8px 0;}
+  .track-step-name{font-size:12px;min-height:auto;text-align:left;}
+  .track-step-date{font-size:11px;}
+  
+  /* Mobile waypoints */
+  .track-waypoints{padding:12px 16px;border-bottom:1px solid #edf0f5;}
+  .waypoints-timeline::before{left:6px;}
+  .waypoint-item{gap:12px;}
+  .waypoint-marker{width:20px;height:20px;margin-top:4px;}
+  .waypoint-type{font-size:12px;}
+  .waypoint-description{font-size:11px;}
+  .waypoint-times{gap:8px;font-size:11px;}
+  
+  .track-info-row{grid-template-columns:1fr;padding:12px 16px 6px;gap:10px;}
+  .track-info-box{padding:10px 0;border-bottom:1px solid #edf0f5;}
+  .track-box-title{font-size:12px;margin-bottom:8px;}
+  .track-box-label{font-size:10px;margin-top:6px;}
+  .track-box-value{font-size:12px;margin-top:3px;}
+  .track-item-wrap{padding:8px 16px 0;}
+  .track-item-title{font-size:12px;margin:12px 0 8px;}
+  .track-map-wrap{padding:12px 0 16px;}
+  .track-map-head{gap:8px;padding:0 16px 8px;}
+  .track-map-coords{font-size:10px;padding:5px 8px;}
+  
+  /* Ensure touch targets are at least 44x44 */
+  .back-link{min-height:44px;padding:12px 16px;font-size:14px;}
+  button.track-control{min-height:44px;}
+  
+  /* Better scroll performance */
+  .track-shell{-webkit-overflow-scrolling:touch;}
 }
 
 /* Premium operations finish */

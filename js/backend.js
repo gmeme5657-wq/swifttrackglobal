@@ -29,7 +29,7 @@ subscribeShipments(callback){
 async getShipmentByTracking(trackingNumber){
   const client=this.ensureClient();
   if(!client)return null;
-  const result=await client.from("shipments").select("*").eq("tracking_number",trackingNumber).maybeSingle();
+  const result=await client.from("public_tracking_shipments").select("*").eq("tracking_number",trackingNumber).maybeSingle();
   if(result.error)throw result.error;
   return result.data;
 },
@@ -43,7 +43,6 @@ async upsertShipment(shipment){
     sender_address:shipment.sender?.address||"",
     receiver_name:shipment.receiver?.name||"Recipient",
     receiver_email:shipment.receiver?.email||"",
-    receiver_phone:shipment.receiver?.phone||"",
     receiver_address:shipment.receiver?.address||"",
     origin_city:shipment.origin?.city||"",
     origin_lat:shipment.origin?.lat,
