@@ -3,7 +3,7 @@
  * Handles background notifications and message passing
  */
 
-const CACHE_NAME = 'swift-tracking-v3-mobile-2026-09-14';
+const CACHE_NAME = 'swift-tracking-v4-partners-2026-09-14';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
